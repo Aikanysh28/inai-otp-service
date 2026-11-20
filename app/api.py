@@ -17,7 +17,7 @@
   POST /cabinet/freeze   {"duration"}      -> заморозить выдачу кодов (сек или null)
   POST /cabinet/unfreeze                   -> снять заморозку
   POST /cabinet/logout                     -> завершить сессию
-  GET  /api/risk/{overview,timeline,ips,ip,scatter,alerts,meta} -> модуль рисков (только чтение)
+  GET  /api/risk/{overview,timeline,ips,ip,scatter,alerts,meta,graph,summary} -> модуль рисков
 """
 from __future__ import annotations
 
@@ -225,6 +225,8 @@ class OTPApi:
             ("GET", "/api/risk/scatter"): self._risk_route(self.risk_scatter),
             ("GET", "/api/risk/alerts"): self._risk_route(self.risk_alerts),
             ("GET", "/api/risk/meta"): self._risk_route(self.risk_meta),
+            ("GET", "/api/risk/graph"): self._risk_route(self.risk_graph),
+            ("GET", "/api/risk/summary"): self._risk_route(self.risk_summary),
         }
         if service.settings.demo_show_code:
             self._routes["POST", "/demo/send"] = self.demo_send
@@ -406,6 +408,14 @@ class OTPApi:
 
     def risk_meta(self, request: Request, risk: RiskEngine):
         return risk.meta
+
+    def risk_graph(self, request: Request, risk: RiskEngine):
+        window = _int_param(request, "window", 600, 60, 3600)
+        return lambda: risk.graph(window=window)
+
+    def risk_summary(self, request: Request, risk: RiskEngine):
+        window = _int_param(request, "window", 600, 60, 3600)
+        return lambda: risk.summary(window=window)
 
     def _authorized(self, request: Request) -> bool:
         if not self.dashboard_token:

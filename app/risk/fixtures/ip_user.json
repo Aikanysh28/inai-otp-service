@@ -7,6 +7,7 @@
   "would_action_text": "обычный режим",
   "reasons": [],
   "current_score": 0,
+  "first_high": null,
   "first_seen": 1795161600.0,
   "last_seen": 1795161616.045,
   "stats": {

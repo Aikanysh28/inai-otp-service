@@ -33,6 +33,11 @@
     }
   ],
   "current_score": 100,
+  "first_high": {
+    "ts": 1795163167.094,
+    "after_seconds": 3.5,
+    "at_number": 6
+  },
   "first_seen": 1795163163.643,
   "last_seen": 1795163212.32,
   "stats": {

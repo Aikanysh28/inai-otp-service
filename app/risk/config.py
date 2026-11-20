@@ -64,6 +64,12 @@ class RiskSettings:
     sms_price: float = 1.0
     currency: str = "сом"
 
+    # Сводка инцидента через LLM — выключена, пока не задан ключ (RISK_LLM_API_KEY)
+    llm_api_key: str = dataclasses.field(default="", repr=False)
+    llm_model: str = "claude-haiku-5-5"
+    llm_timeout: float = 5.0
+    llm_cache_seconds: int = 30
+
     # Ограничения памяти
     max_events_per_ip: int = 5000
     max_points: int = 20000

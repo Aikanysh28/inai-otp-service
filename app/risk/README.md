@@ -16,7 +16,8 @@
 | `config.py` | `RiskSettings`: все пороги; `RiskSettings.from_env()` читает `RISK_<ПОЛЕ>` |
 | `schema.py` | `RiskEvent`, `EVENT_MAP` (текущие имена журнала → целевые), `normalize()`, `make_msisdn_id()`, `mask_msisdn()` |
 | `signals.py` | `WindowStats`, `Signal`, признаки — чистые функции |
-| `engine.py` | `RiskEngine`: `sink`, `ingest`, тревоги, запросы `assess / overview / timeline / top_ips / ip_detail / scatter / alerts / meta` |
+| `engine.py` | `RiskEngine`: `sink`, `ingest`, тревоги, запросы `assess / overview / timeline / top_ips / ip_detail / scatter / alerts / meta / graph / incidents / summary` |
+| `summary.py` | сводка инцидента: агрегаты, шаблонный текст, необязательный пересказ через LLM |
 | `simulate.py` | `FakeClock`, `Traffic` (генератор событий в текущем формате журнала), `demo_story` |
 | `demo.py` | консольное демо и выгрузка фикстур |
 | `fixtures/` | JSON-ответы движка после демо-сюжета, для вёрстки вкладки |
@@ -99,6 +100,9 @@ OTPService ─► SecurityLog.event() ─► security.log, дашборд (бе�
 |---|---|---|
 | `RISK_ENABLED` | `1` | `0` — модуль не создаётся, `/api/risk/*` → 503 `risk_disabled` |
 | `RISK_ID_SECRET` | пусто | ключ для `msisdn_id`; если не задан — `HMAC-SHA256(OTP_SECRET, "risk-id")` |
+| `RISK_LLM_API_KEY` | пусто | ключ Anthropic API; без него сводка только по шаблону и сеть не используется |
+| `RISK_LLM_MODEL` | `claude-haiku-5-5` | модель для пересказа сводки |
+| `RISK_LLM_TIMEOUT`, `RISK_LLM_CACHE_SECONDS` | `5`, `30` | таймаут запроса к LLM и время жизни кеша ответа |
 | `RISK_<ПОЛЕ>` | см. `config.py` | любой порог, например `RISK_WINDOW=600`, `RISK_SMS_PRICE=1.5`, `RISK_CURRENCY=сом`. Некорректное значение — модуль не запускается, сервис работает |
 
 ## Маршруты (все `GET`, авторизация как у `/api/security/events`)
@@ -116,7 +120,9 @@ OTPService ─► SecurityLog.event() ─► security.log, дашборд (бе�
 | `/api/risk/ip` | `ip` (обязателен; 1–64 символа) | объект; неизвестный IP — 404 `{"status":"not_found"}` |
 | `/api/risk/scatter` | `window` (1800; 60–86400) | массив точек |
 | `/api/risk/alerts` | `limit` (50; 1–500), `since_id` (0; ≥ 0) | массив тревог, новые сверху |
-| `/api/risk/meta` | — | настройки, признаки, счётчики |
+| `/api/risk/meta` | — | настройки, признаки, счётчики, `llm_enabled` |
+| `/api/risk/graph` | `window` (600; 60–3600) | граф «IP → номера» |
+| `/api/risk/summary` | `window` (600; 60–3600) | сводка инцидента |
 
 Примеры (полные — в `fixtures/`):
 
@@ -160,3 +166,48 @@ OTPService ─► SecurityLog.event() ─► security.log, дашборд (бе�
  "sms_price": 1.0, "currency": "сом", "ingested": 2052, "ignored": 0, "errors": 0,
  "ips_tracked": 1, "alerts_total": 2, "dropped": 0}
 ```
+
+## Граф «IP → номера»
+
+`RiskEngine.graph(window=600, max_ips=15, max_numbers=60)`. IP берутся по убыванию балла. Узел номера
+строится по псевдониму (`n:<sha256(msisdn_id)[:12]>`), подписан маской. Номер, к которому обращались
+несколько IP, — один узел с несколькими рёбрами. На ребре — `sends`, `verifies`, `fails`. Если лимиты
+обрезали граф, `truncated: true`. История IP хранится не дольше окна признаков (10 минут).
+
+```jsonc
+{"nodes": [{"id": "ip:45.13.7.200", "type": "ip", "label": "45.13.7.200", "level": "high", "score": 90},
+           {"id": "n:3f2a91c04b1e", "type": "number", "label": "+996700***203", "level": "high"}],
+ "edges": [{"source": "ip:45.13.7.200", "target": "n:3f2a91c04b1e", "sends": 1, "verifies": 0, "fails": 0}],
+ "truncated": false, "window": 600, "now": 1795163280.57}
+```
+
+## Сводка инцидента
+
+`GET /api/risk/summary?window=600` → `{"text", "incidents", "source": "template" | "llm", "generated_at", "window", "cached"}`.
+
+* **Шаблон работает всегда.** Это период по Бишкеку, общий уровень, SMS (всего, подозрительных, стоимость),
+  а по каждому IP уровня «Средний» и «Высокий» — тип инцидента, IP, балл, номера (диапазон масок, если
+  номера идут подряд), SMS и стоимость. Ещё в сводке указано, через сколько секунд и на каком номере
+  появилась тревога «Высокий», что было бы сделано в боевом режиме, и даны рекомендации.
+* **Типы инцидентов** определяются по признакам:
+  * «Веер» + «Подряд» + «Без подтверждений» без ошибок ввода → SMS pumping;
+  * «Веер» + («Ошибки ввода» или «Лимит IP») → распределённый подбор;
+  * «Ошибки ввода» + «Атака на блок» → подбор кода к номеру;
+  * иначе — подозрительная активность.
+* **«Эпизод»** — непрерывная активность IP. Если IP молчал дольше окна признаков, счётчики эпизода
+  (`first_high`: время, через сколько секунд, на каком номере) начинаются заново.
+* **LLM — по желанию**, только если задан `RISK_LLM_API_KEY`:
+  * `urllib` шлёт запрос на `https://api.anthropic.com/v1/messages` с заголовками `x-api-key`
+    и `anthropic-version: 2023-06-01`, модель берётся из `RISK_LLM_MODEL`, `effort: low`;
+  * в запрос уходит только JSON с агрегатами — без полных номеров, кодов и сырых событий;
+  * из ответа берутся только текстовые блоки;
+  * при отказе (`stop_reason: refusal`), ошибке или таймауте (5 с, вызов идёт в отдельном потоке)
+    возвращается шаблон;
+  * ответ кешируется на 30 с;
+  * LLM вызывается только из `/api/risk/summary`, а не в потоке OTP-запросов, и ничего не решает:
+    баллы и уровни считает детерминированный код.
+
+## Демо
+
+Сюжет для защиты и цифры для слайда — в `DEMO.md` в корне. Коротко: `python3 demo_traffic.py --scenario demo --token demo`
+и `python3 attack.py --only pumping --client-ip 45.13.7.200 --token demo`.

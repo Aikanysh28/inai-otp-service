@@ -108,7 +108,7 @@ class DashboardTest(unittest.TestCase):
         style = re.search(r"<style>(.*?)</style>", self.html, re.S).group(1)
         new_part = style[style.index("вкладка «Риски»"):]
         classes = set(re.findall(r"\.([a-zA-Z][\w-]*)", new_part))
-        existing = {"tile", "value", "badge", "card", "chips", "bar"}
+        existing = {"tile", "value", "badge", "card", "chips", "bar", "chart"}
         self.assertEqual({c for c in classes if not c.startswith("risk-")} - existing, set())
 
     def test_no_new_colors_in_risk_part(self):

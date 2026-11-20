@@ -17,11 +17,13 @@ from typing import Any, Callable, Optional
 
 from .config import RiskSettings
 from .schema import RiskEvent, normalize
+from .summary import SummaryService, incident_type, make_node_id
 from .signals import (
     ACTIONS, LEVEL_RANK, LEVELS, SIGNAL_INFO, Signal, WindowStats, evaluate, level_of, score_of,
 )
 
 SEND_KINDS = frozenset({"send_ok", "send_rejected"})
+VERIFY_KINDS = frozenset({"verify_ok", "verify_fail", "verify_expired", "verify_locked"})
 # События, к которым относится признак «новый IP для номера»
 NEW_IP_KINDS = frozenset({"send_ok", "send_rejected", "verify_ok", "verify_fail",
                           "verify_expired", "verify_locked"})
@@ -69,6 +71,10 @@ class _IpState:
     last_seen: float
     last: Assessment
     level_seen: dict[str, float] = field(default_factory=dict)  # уровень -> когда был последний раз
+    # Эпизод — непрерывная активность IP (паузы короче окна признаков)
+    episode_start: float = 0.0
+    episode_sends: int = 0  # send_ok за эпизод
+    first_high: Optional[dict] = None  # {"ts", "after_seconds", "at_number"} — первая тревога high
 
 
 def _round_ts(ts: float) -> float:
@@ -101,6 +107,7 @@ class RiskEngine:
         self._worker: Optional[threading.Thread] = None
         self._dropped_lock = threading.Lock()  # только для счётчика, держится на одно сложение
         self.dropped = 0
+        self._summary = SummaryService(self)
 
     # ---------- приём событий ----------
 
@@ -194,8 +201,12 @@ class RiskEngine:
             state = self._ips.get(ev.ip)
             if state is None:
                 empty = Assessment(ev.ip, ev.ts, 0, "low", ())
-                state = _IpState(deque(), ev.ts, ev.ts, empty)
+                state = _IpState(deque(), ev.ts, ev.ts, empty, episode_start=ev.ts)
                 self._ips[ev.ip] = state
+            elif ev.ts - state.last_seen >= s.window:
+                state.episode_start, state.episode_sends, state.first_high = ev.ts, 0, None
+            if ev.kind == "send_ok":
+                state.episode_sends += 1
 
             flag = self._is_new_ip(ev)
             state.events.append((ev, flag))
@@ -213,6 +224,10 @@ class RiskEngine:
             state.level_seen[assessment.level] = now
             if LEVEL_RANK[assessment.level] > LEVEL_RANK[previous]:
                 self._raise_alert(assessment)
+            if assessment.level == "high" and state.first_high is None:
+                state.first_high = {"ts": _round_ts(ev.ts),
+                                    "after_seconds": round(ev.ts - state.episode_start, 1),
+                                    "at_number": state.episode_sends}
 
             minute = self._minutes.setdefault(int(ev.ts // 60) * 60, Counter())
             minute[ev.kind] += 1
@@ -408,6 +423,7 @@ class RiskEngine:
             detail = a.to_dict()
             detail.update({
                 "current_score": self._assess_events(ip, state.events, now).score,
+                "first_high": dict(state.first_high) if state.first_high else None,
                 "first_seen": _round_ts(state.first_seen),
                 "last_seen": _round_ts(state.last_seen),
                 "stats": {
@@ -431,6 +447,104 @@ class RiskEngine:
                 ],
             })
             return detail
+
+    def graph(self, window: int = 600, max_ips: int = 15, max_numbers: int = 60) -> dict:
+        """Граф «IP → номера» за окно: IP по убыванию балла, номера — по msisdn_id (подпись — маска).
+
+        Номер, к которому обращались несколько IP, — один узел с несколькими рёбрами.
+        История событий IP хранится не дольше окна признаков (settings.window).
+        """
+        now = self.clock()
+        horizon = now - window
+        with self._lock:
+            candidates = [st for st in self._ips.values() if st.last_seen >= horizon]
+            candidates.sort(key=lambda st: (st.last.score, st.last_seen), reverse=True)
+            chosen = candidates[:max(0, max_ips)]
+            truncated = len(candidates) > len(chosen)
+            nodes, edges, numbers = [], {}, {}
+            per_ip: list[tuple[str, str, dict]] = []  # (ip_id, level, {num_id: (маска, события)})
+            for st in chosen:
+                ip_id = "ip:" + st.last.ip
+                nodes.append({"id": ip_id, "type": "ip", "label": st.last.ip,
+                              "level": st.last.level, "score": st.last.score})
+                own: dict[str, tuple[Optional[str], list]] = {}
+                for ev, _ in st.events:
+                    if ev.ts < horizon or ev.msisdn_id is None:
+                        continue
+                    num_id = "n:" + make_node_id(ev.msisdn_id)
+                    own.setdefault(num_id, (ev.msisdn_masked, []))[1].append(ev.kind)
+                per_ip.append((ip_id, st.last.level, own))
+            # Номера раздаются по кругу: каждому IP по одному за проход, пока не исчерпан лимит —
+            # так и бот остаётся «звездой», и у обычных пользователей виден их луч.
+            queues = [(ip_id, level, list(own.items())) for ip_id, level, own in per_ip]
+            budget = max(0, max_numbers)
+            while any(queue for _, _, queue in queues):
+                for ip_id, level, queue in queues:
+                    if not queue:
+                        continue
+                    num_id, (mask, kinds) = queue.pop(0)
+                    if num_id not in numbers:
+                        if len(numbers) >= budget:
+                            truncated = True
+                            continue
+                        numbers[num_id] = {"id": num_id, "type": "number", "label": mask or "—",
+                                           "level": "low"}
+                    node = numbers[num_id]
+                    if LEVEL_RANK[level] > LEVEL_RANK[node["level"]]:
+                        node["level"] = level
+                    edge = edges.setdefault((ip_id, num_id), {"source": ip_id, "target": num_id,
+                                                               "sends": 0, "verifies": 0, "fails": 0})
+                    for kind in kinds:
+                        if kind in SEND_KINDS:
+                            edge["sends"] += 1
+                        elif kind in VERIFY_KINDS:
+                            edge["verifies"] += 1
+                            if kind in ("verify_fail", "verify_locked"):
+                                edge["fails"] += 1
+        return {"nodes": nodes + list(numbers.values()), "edges": list(edges.values()),
+                "truncated": truncated, "window": window, "now": _round_ts(now)}
+
+    def incidents(self, window: int = 600) -> list[dict]:
+        """Агрегаты по IP уровня medium/high за окно — основа сводки (без полных номеров)."""
+        now = self.clock()
+        horizon = now - window
+        s = self.settings
+        with self._lock:
+            states = [st for st in self._ips.values()
+                      if st.last_seen >= horizon and st.last.level != "low"]
+            states.sort(key=lambda st: (st.last.score, st.last_seen), reverse=True)
+            result = []
+            for st in states:
+                a = st.last
+                sends = sorted(((int(ev.msisdn_tail), ev.msisdn_masked) for ev, _ in st.events
+                                if ev.kind == "send_ok" and ev.msisdn_tail and ev.msisdn_tail.isdigit()),
+                               key=lambda item: item[0])
+                names = [r.name for r in a.reasons]
+                number_range = None
+                if sends and "sequential" in names:
+                    number_range = {"first": sends[0][1], "last": sends[-1][1]}
+                result.append({
+                    "ip": a.ip,
+                    "type": incident_type(names),
+                    "score": a.score,
+                    "level": a.level,
+                    "reasons": [r.to_dict() for r in a.reasons],
+                    "numbers": len(a.stats.numbers),
+                    "number_range": number_range,
+                    "sms_sent": a.stats.sends_ok,
+                    "sms_cost": round(a.stats.sends_ok * s.sms_price, 2),
+                    "verify_attempts": a.stats.verify_attempts,
+                    "first_seen": _round_ts(st.episode_start),
+                    "last_seen": _round_ts(st.last_seen),
+                    "first_high": dict(st.first_high) if st.first_high else None,
+                    "would_action": a.would_action,
+                    "would_action_text": a.would_action_text,
+                })
+        return result
+
+    def summary(self, window: int = 600) -> dict:
+        """Сводка инцидента: шаблон всегда, LLM — только если задан RISK_LLM_API_KEY."""
+        return self._summary.summarize(window)
 
     def scatter(self, window: int = 1800) -> list[dict]:
         horizon = self.clock() - window
@@ -481,5 +595,6 @@ class RiskEngine:
                         for name, text in SIGNAL_INFO],
             "sms_price": s.sms_price,
             "currency": s.currency,
+            "llm_enabled": bool(s.llm_api_key),
             **counters,
         }

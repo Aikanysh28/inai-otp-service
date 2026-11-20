@@ -85,6 +85,7 @@
   ],
   "sms_price": 1.0,
   "currency": "сом",
+  "llm_enabled": false,
   "ingested": 315,
   "ignored": 0,
   "errors": 0,
