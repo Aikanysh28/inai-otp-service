@@ -8,25 +8,44 @@
   "reasons": [
     {
       "name": "fan_out",
+      "title": "Массовая рассылка",
       "points": 40,
-      "detail": "коды запрошены на 40 номеров за 10 мин"
+      "detail": "коды на 40 номеров с одного IP за 10 мин"
     },
     {
       "name": "sequential",
+      "title": "Перебор номеров по порядку",
       "points": 25,
-      "detail": "100% номеров идут подряд (40 из 40)"
+      "detail": "100% номеров идут подряд"
     },
     {
       "name": "no_conversion",
+      "title": "Коды не вводятся",
       "points": 25,
       "detail": "40 SMS отправлено, подтверждено 0"
     }
   ],
   "current_score": 90,
+  "incident_type": "sms_pumping",
+  "incident_title": "SMS-флуд",
+  "incident_subtitle": "бот тратит бюджет на SMS",
+  "level_title": "Критический",
+  "would_action_title": "блокировка",
   "first_high": {
     "ts": 1795163031.376,
     "after_seconds": 13.9,
     "at_number": 6
+  },
+  "detected": {
+    "ts": 1795163029.206,
+    "after_seconds": 11.7,
+    "at_number": 5,
+    "level": "medium"
+  },
+  "savings": {
+    "sms": 34,
+    "cost": 34.0,
+    "currency": "сом"
   },
   "first_seen": 1795163017.524,
   "last_seen": 1795163118.412,
@@ -415,5 +434,30 @@
       "scope": null,
       "new_ip": false
     }
-  ]
+  ],
+  "timeline_groups": [
+    {
+      "first_ts": 1795163017.524,
+      "last_ts": 1795163118.412,
+      "event": "send_ok",
+      "status": 200,
+      "msisdn": null,
+      "count": 40,
+      "numbers": 40,
+      "msisdn_first": "+996700***200",
+      "msisdn_last": "+996700***239",
+      "new_ip": false,
+      "scope": null
+    }
+  ],
+  "timeline_skipped": 0,
+  "defense_facts": {
+    "numbers_blocked": 0,
+    "locked_attempts": 0,
+    "ip_limited": 0,
+    "send_rejected": 0,
+    "blocked_numbers": [],
+    "fails_to_block": 5
+  },
+  "weights_sum": 90
 }

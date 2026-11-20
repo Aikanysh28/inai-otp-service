@@ -54,6 +54,7 @@ class RiskSettings:
 
     # ip_limited: срабатывал лимит проверок по IP
     ip_limited_points: int = 15
+    service_ip_verify_limit: int = 20  # лимит сервиса по ТЗ — только для подписи признака
 
     # night: последнее событие в [night_start_hour, night_end_hour) по Бишкеку
     night_start_hour: int = 1
@@ -64,10 +65,18 @@ class RiskSettings:
     sms_price: float = 1.0
     currency: str = "сом"
 
-    # Сводка инцидента через LLM — выключена, пока не задан ключ (RISK_LLM_API_KEY)
+    # Сводка инцидента через LLM — выключена, пока не задана цепочка провайдеров или ключ.
+    # RISK_LLM_PROVIDERS: пресеты через запятую (groq, gemini, openrouter, ollama, anthropic).
+    # Только RISK_LLM_API_KEY без цепочки — как раньше: Anthropic.
+    llm_providers: str = ""
     llm_api_key: str = dataclasses.field(default="", repr=False)
-    llm_model: str = "claude-haiku-5-5"
-    llm_timeout: float = 5.0
+    llm_groq_key: str = dataclasses.field(default="", repr=False)
+    llm_gemini_key: str = dataclasses.field(default="", repr=False)
+    llm_openrouter_key: str = dataclasses.field(default="", repr=False)
+    llm_anthropic_key: str = dataclasses.field(default="", repr=False)
+    llm_model: str = ""  # пусто — модель пресета; действует на первого провайдера цепочки
+    llm_base_url: str = ""  # пусто — адрес пресета; действует на первого провайдера цепочки
+    llm_timeout: float = 6.0  # на одного провайдера; на всю цепочку — не больше 2 × llm_timeout
     llm_cache_seconds: int = 30
 
     # Ограничения памяти

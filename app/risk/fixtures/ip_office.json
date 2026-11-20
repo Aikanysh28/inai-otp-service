@@ -8,12 +8,20 @@
   "reasons": [
     {
       "name": "fan_out",
+      "title": "Массовая рассылка",
       "points": 20,
-      "detail": "коды запрошены на 8 номеров за 10 мин"
+      "detail": "коды на 8 номеров с одного IP за 10 мин"
     }
   ],
   "current_score": 0,
+  "incident_type": "none",
+  "incident_title": "",
+  "incident_subtitle": "",
+  "level_title": "Низкий",
+  "would_action_title": "без ограничений",
   "first_high": null,
+  "detected": null,
+  "savings": null,
   "first_seen": 1795162377.335,
   "last_seen": 1795162617.981,
   "stats": {
@@ -203,5 +211,121 @@
       "scope": null,
       "new_ip": false
     }
-  ]
+  ],
+  "timeline_groups": [
+    {
+      "first_ts": 1795162377.335,
+      "last_ts": 1795162377.335,
+      "event": "send_ok",
+      "status": 200,
+      "msisdn": "+996551***346",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996551***346",
+      "msisdn_last": "+996551***346",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162403.698,
+      "last_ts": 1795162403.698,
+      "event": "verify_ok",
+      "status": 200,
+      "msisdn": "+996551***346",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996551***346",
+      "msisdn_last": "+996551***346",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162408.136,
+      "last_ts": 1795162408.136,
+      "event": "send_ok",
+      "status": 200,
+      "msisdn": "+996993***024",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996993***024",
+      "msisdn_last": "+996993***024",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162426.653,
+      "last_ts": 1795162426.653,
+      "event": "verify_ok",
+      "status": 200,
+      "msisdn": "+996993***024",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996993***024",
+      "msisdn_last": "+996993***024",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162584.766,
+      "last_ts": 1795162584.766,
+      "event": "verify_fail",
+      "status": 401,
+      "msisdn": "+996991***228",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996991***228",
+      "msisdn_last": "+996991***228",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162596.235,
+      "last_ts": 1795162596.235,
+      "event": "verify_ok",
+      "status": 200,
+      "msisdn": "+996991***228",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996991***228",
+      "msisdn_last": "+996991***228",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162604.441,
+      "last_ts": 1795162604.441,
+      "event": "send_ok",
+      "status": 200,
+      "msisdn": "+996770***656",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996770***656",
+      "msisdn_last": "+996770***656",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162617.981,
+      "last_ts": 1795162617.981,
+      "event": "verify_ok",
+      "status": 200,
+      "msisdn": "+996770***656",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996770***656",
+      "msisdn_last": "+996770***656",
+      "new_ip": false,
+      "scope": null
+    }
+  ],
+  "timeline_skipped": 10,
+  "defense_facts": {
+    "numbers_blocked": 0,
+    "locked_attempts": 0,
+    "ip_limited": 0,
+    "send_rejected": 0,
+    "blocked_numbers": [],
+    "fails_to_block": 5
+  },
+  "weights_sum": 20
 }

@@ -8,36 +8,53 @@
   "reasons": [
     {
       "name": "fan_out",
+      "title": "Массовая рассылка",
       "points": 40,
-      "detail": "коды запрошены на 50 номеров за 10 мин"
+      "detail": "коды на 50 номеров с одного IP за 10 мин"
     },
     {
       "name": "sequential",
+      "title": "Перебор номеров по порядку",
       "points": 25,
-      "detail": "100% номеров идут подряд (50 из 50)"
+      "detail": "100% номеров идут подряд"
     },
     {
       "name": "no_conversion",
+      "title": "Коды не вводятся",
       "points": 25,
       "detail": "50 SMS отправлено, подтверждено 0"
     },
     {
       "name": "fail_rate",
+      "title": "Подбор кода",
       "points": 25,
-      "detail": "100% проверок неудачны (20 попыток)"
+      "detail": "20 неудачных проверок кода (100% попыток)"
     },
     {
       "name": "ip_limited",
+      "title": "Превышен лимит проверок",
       "points": 15,
-      "detail": "лимит проверок по IP срабатывал: 80"
+      "detail": "лимит 20 проверок/мин сработал 80 раз"
     }
   ],
   "current_score": 100,
+  "incident_type": "distributed_bruteforce",
+  "incident_title": "Распределённый подбор кодов",
+  "incident_subtitle": "перебор по многим номерам с одного IP",
+  "level_title": "Критический",
+  "would_action_title": "блокировка",
   "first_high": {
     "ts": 1795163167.094,
     "after_seconds": 3.5,
     "at_number": 6
   },
+  "detected": {
+    "ts": 1795163166.493,
+    "after_seconds": 2.8,
+    "at_number": 5,
+    "level": "medium"
+  },
+  "savings": null,
   "first_seen": 1795163163.643,
   "last_seen": 1795163212.32,
   "stats": {
@@ -515,5 +532,56 @@
       "scope": null,
       "new_ip": false
     }
-  ]
+  ],
+  "timeline_groups": [
+    {
+      "first_ts": 1795163163.643,
+      "last_ts": 1795163194.462,
+      "event": "send_ok",
+      "status": 200,
+      "msisdn": null,
+      "count": 50,
+      "numbers": 50,
+      "msisdn_first": "+996756***891",
+      "msisdn_last": "+996756***940",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795163194.863,
+      "last_ts": 1795163198.64,
+      "event": "verify_fail",
+      "status": 401,
+      "msisdn": null,
+      "count": 20,
+      "numbers": 20,
+      "msisdn_first": "+996756***891",
+      "msisdn_last": "+996756***910",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795163198.93,
+      "last_ts": 1795163212.32,
+      "event": "ip_rate_limited",
+      "status": 429,
+      "msisdn": null,
+      "count": 80,
+      "numbers": 0,
+      "msisdn_first": null,
+      "msisdn_last": null,
+      "new_ip": false,
+      "scope": null
+    }
+  ],
+  "timeline_skipped": 0,
+  "defense_facts": {
+    "numbers_blocked": 0,
+    "locked_attempts": 0,
+    "ip_limited": 80,
+    "send_rejected": 0,
+    "blocked_numbers": [],
+    "fails_to_block": 5
+  },
+  "weights_sum": 130
 }

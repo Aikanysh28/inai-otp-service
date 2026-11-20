@@ -17,7 +17,9 @@
 | `schema.py` | `RiskEvent`, `EVENT_MAP` (текущие имена журнала → целевые), `normalize()`, `make_msisdn_id()`, `mask_msisdn()` |
 | `signals.py` | `WindowStats`, `Signal`, признаки — чистые функции |
 | `engine.py` | `RiskEngine`: `sink`, `ingest`, тревоги, запросы `assess / overview / timeline / top_ips / ip_detail / scatter / alerts / meta / graph / incidents / summary` |
-| `summary.py` | сводка инцидента: агрегаты, шаблонный текст, необязательный пересказ через LLM |
+| `summary.py` | сводка инцидента: агрегаты, шаблонный текст, псевдонимы IP, проверка фактов |
+| `llm.py` | LLM-клиент на stdlib: пресеты провайдеров, цепочка с откатом, паузы после 429/401, бюджет времени |
+| `llm_check.py` | `python3 -m app.risk.llm_check` — проверка провайдеров из окружения |
 | `simulate.py` | `FakeClock`, `Traffic` (генератор событий в текущем формате журнала), `demo_story` |
 | `demo.py` | консольное демо и выгрузка фикстур |
 | `fixtures/` | JSON-ответы движка после демо-сюжета, для вёрстки вкладки |
@@ -100,9 +102,11 @@ OTPService ─► SecurityLog.event() ─► security.log, дашборд (бе�
 |---|---|---|
 | `RISK_ENABLED` | `1` | `0` — модуль не создаётся, `/api/risk/*` → 503 `risk_disabled` |
 | `RISK_ID_SECRET` | пусто | ключ для `msisdn_id`; если не задан — `HMAC-SHA256(OTP_SECRET, "risk-id")` |
-| `RISK_LLM_API_KEY` | пусто | ключ Anthropic API; без него сводка только по шаблону и сеть не используется |
-| `RISK_LLM_MODEL` | `claude-haiku-5-5` | модель для пересказа сводки |
-| `RISK_LLM_TIMEOUT`, `RISK_LLM_CACHE_SECONDS` | `5`, `30` | таймаут запроса к LLM и время жизни кеша ответа |
+| `RISK_LLM_PROVIDERS` | пусто | цепочка пресетов через запятую: `groq`, `gemini`, `openrouter`, `ollama`, `anthropic`; пусто — LLM выключена |
+| `RISK_LLM_GROQ_KEY`, `RISK_LLM_GEMINI_KEY`, `RISK_LLM_OPENROUTER_KEY`, `RISK_LLM_ANTHROPIC_KEY` | пусто | ключи по провайдерам; провайдер без ключа (кроме `ollama`) пропускается |
+| `RISK_LLM_API_KEY` | пусто | ключ первого провайдера; без `RISK_LLM_PROVIDERS` — Anthropic, как раньше |
+| `RISK_LLM_MODEL`, `RISK_LLM_BASE_URL` | из пресета | переопределение модели и адреса первого провайдера |
+| `RISK_LLM_TIMEOUT`, `RISK_LLM_CACHE_SECONDS` | `6`, `30` | таймаут одного провайдера (вся цепочка — не дольше 2×) и кеш сводки |
 | `RISK_<ПОЛЕ>` | см. `config.py` | любой порог, например `RISK_WINDOW=600`, `RISK_SMS_PRICE=1.5`, `RISK_CURRENCY=сом`. Некорректное значение — модуль не запускается, сервис работает |
 
 ## Маршруты (все `GET`, авторизация как у `/api/security/events`)
@@ -120,7 +124,7 @@ OTPService ─► SecurityLog.event() ─► security.log, дашборд (бе�
 | `/api/risk/ip` | `ip` (обязателен; 1–64 символа) | объект; неизвестный IP — 404 `{"status":"not_found"}` |
 | `/api/risk/scatter` | `window` (1800; 60–86400) | массив точек |
 | `/api/risk/alerts` | `limit` (50; 1–500), `since_id` (0; ≥ 0) | массив тревог, новые сверху |
-| `/api/risk/meta` | — | настройки, признаки, счётчики, `llm_enabled` |
+| `/api/risk/meta` | — | настройки, признаки, счётчики, `llm_enabled`, блок `llm` (провайдеры без ключей, успехи, откаты по причинам) |
 | `/api/risk/graph` | `window` (600; 60–3600) | граф «IP → номера» |
 | `/api/risk/summary` | `window` (600; 60–3600) | сводка инцидента |
 
@@ -183,7 +187,10 @@ OTPService ─► SecurityLog.event() ─► security.log, дашборд (бе�
 
 ## Сводка инцидента
 
-`GET /api/risk/summary?window=600` → `{"text", "incidents", "source": "template" | "llm", "generated_at", "window", "cached"}`.
+`GET /api/risk/summary?window=600` → `{"text", "incidents", "source": "template" | "llm", "provider", "model",
+"latency_ms", "fallback_reason", "generated_at", "window", "cached"}`. `provider` и `model` заполнены только при
+`source == "llm"`; `fallback_reason` — `disabled`, `no_incidents`, `network`, `auth`, `rate_limited`,
+`bad_response`, `fact_check`, `timeout` или `null`.
 
 * **Шаблон работает всегда.** Это период по Бишкеку, общий уровень, SMS (всего, подозрительных, стоимость),
   а по каждому IP уровня «Средний» и «Высокий» — тип инцидента, IP, балл, номера (диапазон масок, если
@@ -211,3 +218,44 @@ OTPService ─► SecurityLog.event() ─► security.log, дашборд (бе�
 
 Сюжет для защиты и цифры для слайда — в `DEMO.md` в корне. Коротко: `python3 demo_traffic.py --scenario demo --token demo`
 и `python3 attack.py --only pumping --client-ip 45.13.7.200 --token demo`.
+
+## LLM-провайдеры (спринт 5)
+
+Почти все бесплатные провайдеры говорят на OpenAI-совместимом протоколе `POST {base_url}/chat/completions`,
+поэтому клиент один (`llm.py`), а провайдеры — пресеты:
+
+| Пресет | `base_url` | Ключ | Модель по умолчанию |
+|---|---|---|---|
+| `groq` (основной) | `https://api.groq.com/openai/v1` | бесплатно, без карты: console.groq.com/keys | `openai/gpt-oss-120b` (`llama-3.3-70b-versatile` с Groq убрана) |
+| `gemini` | `https://generativelanguage.googleapis.com/v1beta/openai` | бесплатно: aistudio.google.com/apikey | `gemini-2.5-flash` (не проверено без ключа — сверьте с `llm_check`) |
+| `openrouter` | `https://openrouter.ai/api/v1` | бесплатно: openrouter.ai/keys | `openrouter/free` |
+| `ollama` | `http://localhost:11434/v1` | не нужен | `qwen2.5:7b` |
+| `anthropic` | `https://api.anthropic.com/v1` | платный | `claude-haiku-5-5` |
+
+* **Запрос:** `Authorization: Bearer <ключ>` (у Ollama без ключа заголовка нет),
+  `{"model", "messages": [system, user], "temperature": 0.2, "max_tokens": 1500}`; текст — `choices[0].message.content`.
+  Для моделей `gpt-oss` добавляется `reasoning_effort: "low"`: они сначала «рассуждают», и при малом
+  `max_tokens` ответ оказывается пустым. Заголовок `User-Agent: otp-risk/1.0` обязателен — на стандартный
+  `Python-urllib` Groq отвечает 403.
+  У Anthropic — прежний формат (`x-api-key`, `anthropic-version`, только текстовые блоки ответа).
+* **Ошибки:** сеть и 5xx → `network`, таймаут → `timeout`, 401/403 → `auth`, 429 → `rate_limited`,
+  прочие 4xx и неожиданный формат → `bad_response`.
+* **Цепочка:** провайдеры по порядку, при ошибке — следующий, если никто не ответил — шаблон.
+  После 429 провайдер пропускается до `Retry-After` (или 60 с), после 401/403 — до перезапуска сервиса.
+  Вся цепочка — не дольше `2 × RISK_LLM_TIMEOUT`.
+* **Приватность:** в `user` уходит только JSON с периодом и инцидентами. IP заменены на `IP-1`, `IP-2`
+  (по порядку инцидентов), номера — маски диапазонов, без кодов, хешей, сырых событий и epoch-времён.
+  В тексте ответа псевдонимы заменяются обратно на настоящие IP. Бесплатные тарифы могут использовать
+  запросы для обучения — поэтому наружу и не уходит ничего, кроме агрегатов.
+* **Проверка фактов** (`summary.fact_check`). Ответ принимается, только если:
+  * каждое число в нём (с пробелами и запятыми в записи: «1 200», «0,8») есть во входном JSON;
+  * упомянуты только псевдонимы IP из входа;
+  * длина 100–1200 символов, нет таблиц и блоков кода (`**`, `#` и маркеры списков убираются).
+
+  Иначе — следующий провайдер, а при откате — `fallback_reason: "fact_check"`.
+* **Нет инцидентов:** LLM не вызывается, `fallback_reason: "no_incidents"`.
+* **Ключи:** не попадают в `repr`, `meta`, ответы API и фикстуры; в `meta` — только `has_key: true/false`.
+
+Проверка: `python3 -m app.risk.llm_check` печатает цепочку из окружения, для каждого провайдера — есть ли ключ,
+`GET /models` (до 20 моделей с `flash`, `llama`, `qwen`, `gpt-oss`, `free`), пробный вызов на `demo_story`
+со временем и результатом проверки фактов. Код выхода 0 — хотя бы один ответ принят.

@@ -80,8 +80,8 @@ class DashboardTest(unittest.TestCase):
 
     def test_risk_blocks_present(self):
         for element_id in ("risk-mode", "risk-tiles", "risk-timeline-svg", "risk-scatter-svg",
-                           "risk-ips", "risk-filter", "risk-detail", "risk-alerts",
-                           "risk-footer", "risk-count", "risk-notice"):
+                           "risk-sources", "risk-lowlist", "risk-dialog", "risk-alerts",
+                           "risk-footer", "risk-tech", "risk-count", "risk-notice"):
             with self.subTest(id=element_id):
                 self.assertIn(element_id, self.ids)
 
@@ -108,7 +108,7 @@ class DashboardTest(unittest.TestCase):
         style = re.search(r"<style>(.*?)</style>", self.html, re.S).group(1)
         new_part = style[style.index("вкладка «Риски»"):]
         classes = set(re.findall(r"\.([a-zA-Z][\w-]*)", new_part))
-        existing = {"tile", "value", "badge", "card", "chips", "bar", "chart"}
+        existing = {"tile", "tiles", "value", "badge", "card", "chips", "bar", "chart", "spacer", "mono"}
         self.assertEqual({c for c in classes if not c.startswith("risk-")} - existing, set())
 
     def test_no_new_colors_in_risk_part(self):

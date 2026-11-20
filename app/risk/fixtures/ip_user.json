@@ -7,7 +7,14 @@
   "would_action_text": "обычный режим",
   "reasons": [],
   "current_score": 0,
+  "incident_type": "none",
+  "incident_title": "",
+  "incident_subtitle": "",
+  "level_title": "Низкий",
+  "would_action_title": "без ограничений",
   "first_high": null,
+  "detected": null,
+  "savings": null,
   "first_seen": 1795161600.0,
   "last_seen": 1795161616.045,
   "stats": {
@@ -53,5 +60,43 @@
       "scope": null,
       "new_ip": false
     }
-  ]
+  ],
+  "timeline_groups": [
+    {
+      "first_ts": 1795161600.0,
+      "last_ts": 1795161600.0,
+      "event": "send_ok",
+      "status": 200,
+      "msisdn": "+996501***240",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996501***240",
+      "msisdn_last": "+996501***240",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795161616.045,
+      "last_ts": 1795161616.045,
+      "event": "verify_ok",
+      "status": 200,
+      "msisdn": "+996501***240",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996501***240",
+      "msisdn_last": "+996501***240",
+      "new_ip": false,
+      "scope": null
+    }
+  ],
+  "timeline_skipped": 0,
+  "defense_facts": {
+    "numbers_blocked": 0,
+    "locked_attempts": 0,
+    "ip_limited": 0,
+    "send_rejected": 0,
+    "blocked_numbers": [],
+    "fails_to_block": 5
+  },
+  "weights_sum": 0
 }

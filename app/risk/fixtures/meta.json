@@ -27,6 +27,7 @@
   "signals": [
     {
       "name": "fan_out",
+      "title": "Массовая рассылка",
       "points": [
         20,
         40
@@ -35,6 +36,7 @@
     },
     {
       "name": "sequential",
+      "title": "Перебор номеров по порядку",
       "points": [
         25
       ],
@@ -42,6 +44,7 @@
     },
     {
       "name": "no_conversion",
+      "title": "Коды не вводятся",
       "points": [
         25
       ],
@@ -49,6 +52,7 @@
     },
     {
       "name": "fail_rate",
+      "title": "Подбор кода",
       "points": [
         25
       ],
@@ -56,6 +60,7 @@
     },
     {
       "name": "new_ip",
+      "title": "Вход с нового IP",
       "points": [
         15
       ],
@@ -63,6 +68,7 @@
     },
     {
       "name": "hammering_locked",
+      "title": "Попытки к заблокированному номеру",
       "points": [
         15
       ],
@@ -70,6 +76,7 @@
     },
     {
       "name": "ip_limited",
+      "title": "Превышен лимит проверок",
       "points": [
         15
       ],
@@ -77,15 +84,35 @@
     },
     {
       "name": "night",
+      "title": "Ночная активность",
       "points": [
         10
       ],
       "description": "активность ночью по Бишкеку"
     }
   ],
+  "level_titles": {
+    "low": "Низкий",
+    "medium": "Средний",
+    "high": "Критический"
+  },
+  "action_titles": {
+    "low": "без ограничений",
+    "medium": "замедление",
+    "high": "блокировка"
+  },
   "sms_price": 1.0,
   "currency": "сом",
   "llm_enabled": false,
+  "llm": {
+    "enabled": false,
+    "providers": [],
+    "timeout": 6.0,
+    "budget": 12.0,
+    "calls_ok": 0,
+    "fallbacks": {},
+    "configured": []
+  },
   "ingested": 315,
   "ignored": 0,
   "errors": 0,

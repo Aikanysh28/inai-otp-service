@@ -8,17 +8,31 @@
   "reasons": [
     {
       "name": "fail_rate",
+      "title": "Подбор кода",
       "points": 25,
-      "detail": "100% проверок неудачны (20 попыток)"
+      "detail": "20 неудачных проверок кода (100% попыток)"
     },
     {
       "name": "hammering_locked",
+      "title": "Попытки к заблокированному номеру",
       "points": 15,
-      "detail": "попыток к заблокированному номеру: 15"
+      "detail": "15 попыток после блокировки"
     }
   ],
   "current_score": 40,
+  "incident_type": "code_bruteforce",
+  "incident_title": "Подбор кода к номеру",
+  "incident_subtitle": "попытка угнать аккаунт",
+  "level_title": "Средний",
+  "would_action_title": "замедление",
   "first_high": null,
+  "detected": {
+    "ts": 1795162695.106,
+    "after_seconds": 7.3,
+    "at_number": 1,
+    "level": "medium"
+  },
+  "savings": null,
   "first_seen": 1795162687.811,
   "last_seen": 1795162699.22,
   "stats": {
@@ -244,5 +258,71 @@
       "scope": null,
       "new_ip": false
     }
-  ]
+  ],
+  "timeline_groups": [
+    {
+      "first_ts": 1795162687.811,
+      "last_ts": 1795162687.811,
+      "event": "send_ok",
+      "status": 200,
+      "msisdn": "+996500***815",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996500***815",
+      "msisdn_last": "+996500***815",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162692.429,
+      "last_ts": 1795162694.154,
+      "event": "verify_fail",
+      "status": 401,
+      "msisdn": "+996500***815",
+      "count": 4,
+      "numbers": 1,
+      "msisdn_first": "+996500***815",
+      "msisdn_last": "+996500***815",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162694.154,
+      "last_ts": 1795162694.154,
+      "event": "verify_fail_blocked",
+      "status": 423,
+      "msisdn": "+996500***815",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996500***815",
+      "msisdn_last": "+996500***815",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162694.41,
+      "last_ts": 1795162699.22,
+      "event": "verify_locked",
+      "status": 423,
+      "msisdn": "+996500***815",
+      "count": 15,
+      "numbers": 1,
+      "msisdn_first": "+996500***815",
+      "msisdn_last": "+996500***815",
+      "new_ip": false,
+      "scope": null
+    }
+  ],
+  "timeline_skipped": 0,
+  "defense_facts": {
+    "numbers_blocked": 1,
+    "locked_attempts": 15,
+    "ip_limited": 0,
+    "send_rejected": 0,
+    "blocked_numbers": [
+      "+996500***815"
+    ],
+    "fails_to_block": 5
+  },
+  "weights_sum": 40
 }
