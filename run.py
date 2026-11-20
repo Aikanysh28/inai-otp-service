@@ -11,7 +11,9 @@ if __name__ == "__main__":
     storage = f"Redis ({settings.redis_url})" if settings.redis_url else "memory"
     print(f"OTP service listening on http://{settings.host}:{settings.port}  storage: {storage}")
     print(f"Dashboard: http://127.0.0.1:{settings.port}/dashboard")
-    print(f"Security log: {settings.log_dir}/security.log   SMS (codes): {settings.log_dir}/sms.log")
+    print(f"Security log: {settings.log_dir}/security.log   SMS outbox: {settings.outbox_path}")
+    if settings.trusted_proxies:
+        print(f"X-Forwarded-For trusted from: {', '.join(sorted(settings.trusted_proxies))}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

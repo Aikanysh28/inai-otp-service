@@ -4,8 +4,8 @@
   2. distributed — распределённый перебор по 50 номерам с одного IP.
 
 Чтобы доказать, что защита реально останавливает атаку (а не просто «не повезло»),
-скрипт подмешивает НАСТОЯЩИЙ код в середину перебора, если может его узнать:
-из ответа /otp/send (OTP_DEBUG_RETURN_CODE=1) или из logs/sms.log.
+скрипт подмешивает НАСТОЯЩИЙ код в середину перебора — «перехватывает» его из
+тестового SMS-транспорта outbox/sms.jsonl (путь — OTP_OUTBOX или --outbox).
 Атака считается успешной, если хоть один verify вернул 200.
 
 Запуск:  python attack.py [--url http://127.0.0.1:8000] [--attempts 1000]
@@ -17,7 +17,6 @@ import argparse
 import json
 import os
 import random
-import re
 import sys
 import time
 import urllib.error
@@ -26,7 +25,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
-SMS_LINE_RE = re.compile(r"to=\+(\d+) code=(\d{6})")
+DEFAULT_OUTBOX = os.getenv("OTP_OUTBOX", os.path.join(os.path.dirname(os.path.abspath(__file__)), "outbox", "sms.jsonl"))
 
 STATUS_LABELS = {
     200: "200 (код подошёл)",
@@ -52,30 +51,37 @@ def post(url: str, payload: dict) -> tuple[int, dict]:
         return status, {}
 
 
-def read_sms_log(sms_log: str) -> dict[str, str]:
-    """Последний «отправленный» код каждого номера из лога SMS."""
+def read_outbox(outbox: str) -> dict[str, str]:
+    """Последний доставленный код каждого номера из outbox (строки JSON {"ts","msisdn","code"})."""
+    codes: dict[str, str] = {}
     try:
-        with open(sms_log, encoding="utf-8") as f:
-            return dict(SMS_LINE_RE.findall(f.read()))  # поздние строки перезаписывают ранние
+        with open(outbox, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    record = json.loads(line)
+                    codes[record["msisdn"]] = record["code"]  # поздние строки перезаписывают ранние
+                except (ValueError, KeyError, TypeError):
+                    continue
     except OSError:
-        return {}
+        pass
+    return codes
 
 
-def send_and_leak(base: str, msisdns: list[str], sms_log: str) -> dict[str, Optional[str]]:
-    """Запросить коды и узнать настоящие (имитация утечки) — из ответа в debug-режиме или из лога SMS.
+def send_and_leak(base: str, msisdns: list[str], outbox: str) -> dict[str, Optional[str]]:
+    """Запросить коды и узнать настоящие (имитация перехвата SMS) из outbox.
 
     Настоящий код подмешивается в перебор, чтобы проверить, что защита не пропустит даже его.
-    Для номеров, которым код не выдан (429), возвращается None.
+    Для номеров, которым код не выдан, возвращается None.
     """
-    issued: dict[str, Optional[str]] = {}
+    issued = set()
     for msisdn in msisdns:
         status, body = post(f"{base}/otp/send", {"msisdn": msisdn})
         if status == 200:
-            issued[msisdn] = body.get("code")
+            issued.add(msisdn)
         else:
             print(f"  send {msisdn} -> {status} {body.get('status')}")
-    leaked = read_sms_log(sms_log) if None in issued.values() else {}  # лог читаем один раз
-    return {m: (issued[m] or leaked.get(m)) if m in issued else None for m in msisdns}
+    leaked = read_outbox(outbox)  # файл читаем один раз на все номера
+    return {m: leaked.get(m) if m in issued else None for m in msisdns}
 
 
 def guesses(n: int, real: Optional[str], plant_at: int) -> list[str]:
@@ -109,9 +115,9 @@ def report(name: str, stats: Counter, planted: bool) -> bool:
     return not success
 
 
-def attack_single(base: str, attempts: int, workers: int, sms_log: str, msisdn: str) -> bool:
+def attack_single(base: str, attempts: int, workers: int, outbox: str, msisdn: str) -> bool:
     print(f"[single] номер {msisdn}")
-    real = send_and_leak(base, [msisdn], sms_log)[msisdn]
+    real = send_and_leak(base, [msisdn], outbox)[msisdn]
     # Настоящий код ставим 16-м: в пределах лимита IP (20/мин), но после 5 неверных вводов.
     # При 10 потоках 16-я задача стартует не раньше, чем завершатся 6 предыдущих,
     # так что номер к этому моменту уже заблокирован — ответ должен быть 423.
@@ -120,8 +126,8 @@ def attack_single(base: str, attempts: int, workers: int, sms_log: str, msisdn: 
     return report("Атака 1: перебор кода для одного номера", stats, real is not None)
 
 
-def attack_distributed(base: str, attempts: int, workers: int, sms_log: str, numbers: list[str]) -> bool:
-    real_codes = send_and_leak(base, numbers, sms_log)
+def attack_distributed(base: str, attempts: int, workers: int, outbox: str, numbers: list[str]) -> bool:
+    real_codes = send_and_leak(base, numbers, outbox)
     known = sum(code is not None for code in real_codes.values())
     print(f"[distributed] настоящие коды известны для {known}/{len(numbers)} номеров")
 
@@ -142,7 +148,7 @@ def main() -> int:
     p.add_argument("--attempts", type=int, default=1000, help="попыток на каждую атаку")
     p.add_argument("--workers", type=int, default=10, help="параллельных потоков")
     p.add_argument("--numbers", type=int, default=50, help="номеров в распределённой атаке")
-    p.add_argument("--sms-log", default=os.path.join("logs", "sms.log"))
+    p.add_argument("--outbox", default=DEFAULT_OUTBOX, help="файл тестового SMS-транспорта сервиса")
     p.add_argument("--only", choices=["single", "distributed"])
     p.add_argument("--pause", type=int, default=61,
                    help="пауза между атаками (сек), чтобы окно лимита по IP сбросилось")
@@ -153,13 +159,13 @@ def main() -> int:
     prefix = 996700000000 + random.randrange(0, 90_000_000, 100)
     ok = True
     if args.only in (None, "single"):
-        ok &= attack_single(base, args.attempts, args.workers, args.sms_log, str(prefix))
+        ok &= attack_single(base, args.attempts, args.workers, args.outbox, str(prefix))
     if args.only is None and args.pause > 0:
         print(f"\n... пауза {args.pause} с, чтобы сбросилось окно лимита по IP ...")
         time.sleep(args.pause)
     if args.only in (None, "distributed"):
         numbers = [str(prefix + 1 + i) for i in range(args.numbers)]
-        ok &= attack_distributed(base, args.attempts, args.workers, args.sms_log, numbers)
+        ok &= attack_distributed(base, args.attempts, args.workers, args.outbox, numbers)
 
     print("\nИТОГ:", "все атаки остановлены защитой" if ok else "есть успешные атаки!")
     return 0 if ok else 1

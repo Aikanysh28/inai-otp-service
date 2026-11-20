@@ -5,9 +5,10 @@
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Optional
+from typing import AbstractSet, Optional
 
 from .api import OTPApi, Request, Response
 from .config import Settings
@@ -18,7 +19,22 @@ from .store import MemoryStore, RedisStore, Store
 MAX_BODY = 4096
 
 
-def make_handler(api: OTPApi) -> type[BaseHTTPRequestHandler]:
+def resolve_client_ip(peer_ip: str, forwarded_for: Optional[str], trusted_proxies: AbstractSet[str]) -> str:
+    """IP клиента: из сокета, а X-Forwarded-For — только если соединение пришло от доверенного прокси.
+
+    Произвольному X-Forwarded-For не доверяем: иначе атакующий обходил бы IP-лимит, меняя заголовок.
+    Берётся последний адрес цепочки — его добавил сам доверенный прокси.
+    """
+    if peer_ip in trusted_proxies and forwarded_for:
+        candidate = forwarded_for.split(",")[-1].strip()
+        try:
+            return str(ipaddress.ip_address(candidate))
+        except ValueError:
+            pass
+    return peer_ip
+
+
+def make_handler(api: OTPApi, trusted_proxies: AbstractSet[str] = frozenset()) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         server_version = "OTPService/1.0"
         sys_version = ""
@@ -39,9 +55,8 @@ def make_handler(api: OTPApi) -> type[BaseHTTPRequestHandler]:
             if length > MAX_BODY:
                 return Response.error(413, "payload_too_large")
             body = self.rfile.read(length) if length else b""
-            # IP берётся из сокета: X-Forwarded-For намеренно не используется, его подделывает атакующий.
-            request = Request.build(self.command, self.path, self.headers, body, self.client_address[0])
-            return api.handle(request)
+            ip = resolve_client_ip(self.client_address[0], self.headers.get("X-Forwarded-For"), trusted_proxies)
+            return api.handle(Request.build(self.command, self.path, self.headers, body, ip))
 
         def _write(self, response: Response) -> None:
             headers = dict(response.headers)
@@ -79,6 +94,7 @@ def create_server(settings: Optional[Settings] = None, service: Optional[OTPServ
     if service is None:
         service = OTPService(settings, SecurityLog(settings.log_dir), store=build_store(settings))
     address = (settings.host if host is None else host, settings.port if port is None else port)
-    server = ThreadingHTTPServer(address, make_handler(OTPApi(service, settings.dashboard_token)))
+    handler = make_handler(OTPApi(service, settings.dashboard_token), settings.trusted_proxies)
+    server = ThreadingHTTPServer(address, handler)
     server.daemon_threads = True
     return server

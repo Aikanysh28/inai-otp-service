@@ -21,9 +21,7 @@ from .otp_service import OTPService, SendStatus, VerifyStatus
 from .security_log import SecurityEvent
 from .store import StoreUnavailable
 
-MSISDN_RE = re.compile(r"^\d{10,15}$")
-MSISDN_SEPARATORS_RE = re.compile(r"[\s\-()]")
-MAX_CODE_CHARS = 32  # неверный по формату код — просто неверный код, но мегабайты не сравниваем
+MSISDN_RE = re.compile(r"^996\d{9}$")  # строка из 12 цифр, начинается с 996
 EVENTS_DEFAULT_LIMIT = 100
 EVENTS_MAX_LIMIT = 1000
 STORE_RETRY_AFTER = 5
@@ -33,7 +31,7 @@ SEND_HTTP_STATUS = {
     SendStatus.SENT: 200,
     SendStatus.RESEND_TOO_EARLY: 429,
     SendStatus.SEND_LIMIT: 429,
-    SendStatus.BLOCKED: 429,
+    SendStatus.BLOCKED: 423,
 }
 
 VERIFY_HTTP_STATUS = {
@@ -46,7 +44,7 @@ VERIFY_HTTP_STATUS = {
 
 
 class BadRequest(Exception):
-    """Некорректный запрос клиента (-> HTTP 422)."""
+    """Некорректный JSON или формат полей (-> HTTP 400)."""
 
 
 @dataclass(frozen=True)
@@ -91,29 +89,24 @@ class Response:
         return cls(status, {"status": reason, **extra})
 
 
-def normalize_msisdn(value: object) -> str:
-    """Принимает 996555123456, +996 555 123-456 и т.п.; возвращает только цифры."""
-    if isinstance(value, bool) or not isinstance(value, (str, int)):
-        raise BadRequest("msisdn must be a string")
-    digits = MSISDN_SEPARATORS_RE.sub("", str(value)).removeprefix("+")
-    if not MSISDN_RE.match(digits):
-        raise BadRequest("msisdn must contain 10-15 digits, e.g. 996555123456")
-    return digits
+def validate_msisdn(value: object) -> str:
+    """Номер — строка ровно из 12 цифр, начинается с 996 (без «+», пробелов и т.п.)."""
+    if not isinstance(value, str) or not MSISDN_RE.fullmatch(value):
+        raise BadRequest("msisdn must be a string of 12 digits starting with 996")
+    return value
 
 
-def normalize_code(value: object, length: int) -> str:
-    if isinstance(value, bool) or not isinstance(value, (str, int)):
-        raise BadRequest("code must be a string of digits")
-    if isinstance(value, int):
-        # int теряет ведущие нули (012345 -> 12345), восстанавливаем
-        return f"{value:0{length}d}"
-    return value.strip()[:MAX_CODE_CHARS]
+def validate_code(value: object, length: int) -> str:
+    """Код — строка ровно из length цифр; ведущие нули значимы, число не принимается."""
+    if not isinstance(value, str) or len(value) != length or not value.isascii() or not value.isdigit():
+        raise BadRequest(f"code must be a string of exactly {length} digits")
+    return value
 
 
-def _require(body: dict, *fields: str) -> None:
-    for name in fields:
-        if name not in body:
-            raise BadRequest(f"field '{name}' is required")
+def _field(body: dict, name: str) -> object:
+    if name not in body:
+        raise BadRequest(f"field '{name}' is required")
+    return body[name]
 
 
 @lru_cache(maxsize=1)
@@ -144,7 +137,7 @@ class OTPApi:
         try:
             return route(request)
         except BadRequest as e:
-            return Response.error(422, "bad_request", error=str(e))
+            return Response.error(400, "bad_request", error=str(e))
         except StoreUnavailable:
             # Хранилище недоступно: не выдаём и не проверяем коды «вслепую» (fail closed).
             self.service.log.event(SecurityEvent.STORE_UNAVAILABLE, ip=request.ip, path=request.path)
@@ -153,25 +146,25 @@ class OTPApi:
     # ---------- OTP ----------
 
     def send(self, request: Request) -> Response:
-        body = request.json()
-        _require(body, "msisdn")
-        result = self.service.send(normalize_msisdn(body["msisdn"]), request.ip)
+        msisdn = validate_msisdn(_field(request.json(), "msisdn"))
+        result = self.service.send(msisdn, request.ip)
 
         payload: dict = {"status": result.status.value}
         if result.status is SendStatus.SENT:
             payload.update(expires_in=result.expires_in, next_send_in=result.retry_after)
-            if result.code is not None:
-                payload["code"] = result.code
         else:
             payload["retry_after"] = result.retry_after
         return Response.json(SEND_HTTP_STATUS[result.status], payload, retry_after=result.retry_after)
 
     def verify(self, request: Request) -> Response:
-        body = request.json()
-        _require(body, "msisdn", "code")
-        msisdn = normalize_msisdn(body["msisdn"])
-        code = normalize_code(body["code"], self.service.settings.code_length)
-        result = self.service.verify(msisdn, code, request.ip)
+        # IP-лимит списывается первым — до разбора тела, проверки кода и блокировки номера:
+        # любой verify, даже с ошибкой формата, расходует квоту IP.
+        result = self.service.consume_verify_quota(request.ip)
+        if result is None:
+            body = request.json()
+            msisdn = validate_msisdn(_field(body, "msisdn"))
+            code = validate_code(_field(body, "code"), self.service.settings.code_length)
+            result = self.service.verify_code(msisdn, code, request.ip)
 
         payload = {
             "status": result.status.value,

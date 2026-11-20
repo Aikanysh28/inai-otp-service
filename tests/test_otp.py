@@ -1,6 +1,7 @@
 """Тесты OTP-сервиса. Время подменяется фейковыми часами — тесты не ждут реальных секунд."""
 from __future__ import annotations
 
+import glob
 import http.client
 import json
 import os
@@ -13,7 +14,8 @@ from typing import Iterator, Optional
 import pytest
 
 from app.config import Settings
-from app.main import create_server
+import run_scenarios
+from app.main import create_server, resolve_client_ip
 from app.otp_service import OTPService, VerifyStatus
 from app.security_log import SecurityEvent, SecurityLog
 from app.store import MemoryStore, RedisStore
@@ -95,15 +97,34 @@ def make_store(kind: str, clock):
 @pytest.fixture(params=["memory", "redis"])
 def env(request, tmp_path):
     clock = FakeClock()
-    settings = Settings(secret_key=b"test-secret", log_dir=str(tmp_path), debug_return_code=True)
+    settings = make_settings(tmp_path)
     service = OTPService(settings, SecurityLog(str(tmp_path), clock=clock), clock=clock,
                          store=make_store(request.param, clock))
     with running_server(settings, service) as client:
+        client.outbox = settings.outbox_path
         yield client, clock, service, tmp_path
+
+
+def make_settings(tmp_path, **overrides) -> Settings:
+    return Settings(secret_key=b"test-secret", log_dir=str(tmp_path),
+                    outbox_path=str(tmp_path / "outbox" / "sms.jsonl"), **overrides)
+
+
+def delivered_code(outbox: str, msisdn: str = MSISDN) -> str:
+    """Последний код для номера из тестового SMS-транспорта (как capture_delivery у жюри)."""
+    with open(outbox, encoding="utf-8") as f:
+        records = [json.loads(line) for line in f]
+    return [r for r in records if r["msisdn"] == msisdn][-1]["code"]
 
 
 def send(client, msisdn=MSISDN):
     return client.post("/otp/send", {"msisdn": msisdn})
+
+
+def issue(client, msisdn=MSISDN) -> str:
+    """Запросить код и «перехватить» его из outbox."""
+    assert send(client, msisdn).status_code == 200
+    return delivered_code(client.outbox, msisdn)
 
 
 def verify(client, code, msisdn=MSISDN):
@@ -118,23 +139,38 @@ def wrong(code: str) -> str:
 
 def test_success(env):
     client, *_ = env
-    r = send(client)
-    assert r.status_code == 200
-    code = r.json()["code"]
+    code = issue(client)
     assert len(code) == 6 and code.isdigit()
     assert verify(client, code).status_code == 200
 
 
+def test_send_response_does_not_contain_code(env):
+    client, *_ = env
+    r = send(client)
+    assert r.status_code == 200
+    assert "code" not in r.json()
+    assert delivered_code(client.outbox) not in r.text
+
+
+def test_outbox_line_format(env):
+    client, *_ = env
+    issue(client)
+    with open(client.outbox, encoding="utf-8") as f:
+        record = json.loads(f.readlines()[-1])
+    assert set(record) == {"ts", "msisdn", "code"}
+    assert record["msisdn"] == MSISDN and record["ts"].endswith("+06:00")
+
+
 def test_code_is_one_time(env):
     client, *_ = env
-    code = send(client).json()["code"]
+    code = issue(client)
     assert verify(client, code).status_code == 200
     assert verify(client, code).status_code == 401
 
 
 def test_wrong_code(env):
     client, *_ = env
-    code = send(client).json()["code"]
+    code = issue(client)
     r = verify(client, wrong(code))
     assert r.status_code == 401
     assert r.json()["attempts_left"] == 4
@@ -142,47 +178,64 @@ def test_wrong_code(env):
 
 def test_expired(env):
     client, clock, *_ = env
-    code = send(client).json()["code"]
+    code = issue(client)
     clock.advance(120)
     assert verify(client, code).status_code == 410
 
 
 def test_valid_just_before_expiry(env):
     client, clock, *_ = env
-    code = send(client).json()["code"]
-    clock.advance(119)
+    code = issue(client)
+    clock.advance(119.999)
     assert verify(client, code).status_code == 200
 
 
 def test_new_send_invalidates_previous_code(env):
-    client, clock, *_ = env
-    old = send(client).json()["code"]
+    client, clock, service, _ = env
+    codes = iter(["111111", "222222"])  # контролируемый источник: коды гарантированно разные
+    service._generate_code = lambda: next(codes)
+    old = issue(client)
     clock.advance(30)
-    new = send(client).json()["code"]
-    if old != new:
-        assert verify(client, old).status_code == 401
+    new = issue(client)
+    assert verify(client, old).status_code == 401
     assert verify(client, new).status_code == 200
 
 
-def test_int_code_with_leading_zero_is_accepted(env):
-    client, _, service, _ = env
+def test_leading_zero_and_all_zero_codes(env):
+    client, clock, service, _ = env
+    service._generate_code = lambda: "000000"
+    assert verify(client, issue(client)).status_code == 200
     service._generate_code = lambda: "012345"
-    send(client)
-    assert verify(client, 12345).status_code == 200
+    clock.advance(30)
+    issue(client)
+    assert verify(client, 12345).status_code == 400  # число вместо строки — ошибка формата
+    assert verify(client, "012345").status_code == 200
 
 
-def test_invalid_msisdn(env):
+@pytest.mark.parametrize("body", [
+    {"msisdn": "abc"}, {"msisdn": "+996555123456"}, {"msisdn": "996 555 123 456"},
+    {"msisdn": "99655512345"}, {"msisdn": "9965551234567"}, {"msisdn": "123555123456"},
+    {"msisdn": 996555123456}, {},
+])
+def test_send_bad_format_returns_400(env, body):
     client, *_ = env
-    assert client.post("/otp/send", {"msisdn": "abc"}).status_code == 422
-    assert client.post("/otp/send", {}).status_code == 422
-    assert client.post("/otp/send", raw=b"not json").status_code == 422
-    assert client.post("/otp/verify", {"msisdn": MSISDN}).status_code == 422
+    assert client.post("/otp/send", body).status_code == 400
 
 
-def test_msisdn_normalization(env):
+@pytest.mark.parametrize("code", ["12345", "1234567", "12a456", " 123456", "１２３４５６", 123456, None])
+def test_verify_bad_code_format_returns_400_and_not_counted(env, code):
     client, *_ = env
-    code = send(client, "+996 555 123-456").json()["code"]
-    assert verify(client, code, MSISDN).status_code == 200
+    real = issue(client)
+    for _ in range(5):
+        assert verify(client, code).status_code == 400
+    assert verify(client, real).status_code == 200  # ошибки формата не привели к блокировке
+
+
+def test_bad_json_returns_400(env):
+    client, *_ = env
+    assert client.post("/otp/send", raw=b"not json").status_code == 400
+    assert client.post("/otp/send", raw=b"[1, 2]").status_code == 400
+    assert client.post("/otp/verify", {"msisdn": MSISDN}).status_code == 400
 
 
 # ---------- задержки и лимит отправки ----------
@@ -193,15 +246,15 @@ def test_progressive_resend_delay(env):
 
     r = send(client)
     assert r.status_code == 429 and int(r.headers["Retry-After"]) == 30
-    clock.advance(29)
+    clock.advance(29.999)
     assert send(client).status_code == 429
-    clock.advance(1)
-    assert send(client).status_code == 200  # 2-я отправка после 30 с
+    clock.advance(0.001)
+    assert send(client).status_code == 200  # 2-я отправка ровно через 30 с
 
-    clock.advance(59)
+    clock.advance(59.999)
     assert send(client).status_code == 429
-    clock.advance(1)
-    assert send(client).status_code == 200  # 3-я отправка после 60 с
+    clock.advance(0.001)
+    assert send(client).status_code == 200  # 3-я отправка ровно через 60 с
 
 
 def test_max_three_sends_per_10_minutes(env):
@@ -211,8 +264,16 @@ def test_max_three_sends_per_10_minutes(env):
         assert send(client).status_code == 200
     clock.advance(300)  # прошло 390 с с первой отправки — всё ещё в окне
     assert send(client).status_code == 429
-    clock.advance(210)  # 600 с с первой отправки — окно сдвинулось
+    clock.advance(210)  # 600 с с первой отправки — она вышла из окна (t-600, t]
     assert send(client).status_code == 200
+
+
+def test_rejected_send_keeps_active_code(env):
+    client, clock, *_ = env
+    code = issue(client)
+    clock.advance(10)
+    assert send(client).status_code == 429
+    assert verify(client, code).status_code == 200
 
 
 def test_send_limits_are_per_number(env):
@@ -223,41 +284,53 @@ def test_send_limits_are_per_number(env):
 
 # ---------- блокировка и лимит по IP ----------
 
-def test_block_after_5_failures(env):
+def test_block_on_fifth_failure(env):
     client, clock, *_ = env
-    code = send(client).json()["code"]
-    for i in range(5):
+    code = issue(client)
+    for i in range(4):
         r = verify(client, wrong(code))
         assert r.status_code == 401
         assert r.json()["attempts_left"] == 4 - i
-    # теперь даже верный код отклоняется
-    r = verify(client, code)
+    r = verify(client, wrong(code))  # пятая ошибка — уже 423
     assert r.status_code == 423
     assert int(r.headers["Retry-After"]) == 900
-    # отправка нового кода тоже запрещена на время блокировки
-    assert send(client).status_code == 429
+    assert verify(client, code).status_code == 423  # верный код в блокировке тоже 423
+    assert send(client).status_code == 423  # send при блокировке
 
 
-def test_block_expires_after_15_minutes(env):
+def test_block_lasts_exactly_900_seconds(env):
     client, clock, *_ = env
-    code = send(client).json()["code"]
+    code = issue(client)
     for _ in range(5):
         verify(client, wrong(code))
-    clock.advance(899)
+    clock.advance(899.999)
     assert verify(client, code).status_code == 423
-    clock.advance(1)
-    new = send(client).json()["code"]
-    assert verify(client, new).status_code == 200
+    assert send(client).status_code == 423
+    clock.advance(0.001)
+    assert verify(client, issue(client)).status_code == 200
+
+
+def test_missing_or_expired_code_not_counted(env):
+    client, clock, *_ = env
+    for _ in range(6):
+        assert verify(client, "123456").status_code == 401  # кода нет
+    code = issue(client)
+    clock.advance(120)
+    assert verify(client, code).status_code == 410
+    for _ in range(5):
+        assert verify(client, code).status_code == 401  # истёкший код уже удалён
+    clock.advance(60)  # сброс окна IP-лимита
+    assert verify(client, issue(client)).status_code == 200
 
 
 def test_success_resets_failure_counter(env):
     client, clock, *_ = env
-    code = send(client).json()["code"]
+    code = issue(client)
     for _ in range(4):
         verify(client, wrong(code))
     assert verify(client, code).status_code == 200
     clock.advance(30)
-    code = send(client).json()["code"]
+    code = issue(client)
     assert verify(client, wrong(code)).json()["attempts_left"] == 4
 
 
@@ -273,11 +346,29 @@ def test_ip_limit_20_per_minute_across_numbers(env):
     assert verify(client, "000000", msisdn="996555000099").status_code == 401
 
 
+def test_bad_format_verifies_consume_ip_limit(env):
+    client, *_ = env
+    code = issue(client)
+    for _ in range(20):
+        assert client.post("/otp/verify", raw=b"garbage").status_code == 400
+    assert verify(client, code).status_code == 429
+
+
+def test_ip_limit_checked_before_block(env):
+    client, *_ = env
+    code = issue(client)
+    for _ in range(5):
+        verify(client, wrong(code))
+    for _ in range(15):
+        verify(client, "000000", msisdn="996555000001")
+    assert verify(client, code).status_code == 429  # не 423: IP-лимит раньше блокировки
+
+
 # ---------- параллельные запросы ----------
 
 def test_parallel_verify_exactly_one_success(env):
-    _, _, service, _ = env
-    code = service.send(MSISDN, "1.1.1.1").code
+    client, _, service, _ = env
+    code = issue(client)
     results = []
     barrier = threading.Barrier(15)
 
@@ -292,23 +383,24 @@ def test_parallel_verify_exactly_one_success(env):
     for t in threads:
         t.join()
     assert results.count(VerifyStatus.OK) == 1
+    assert results.count(VerifyStatus.INVALID) == 14
 
 
 def test_parallel_verify_over_http(env):
-    client, _, service, _ = env
-    code = send(client).json()["code"]
+    client, *_ = env
+    code = issue(client)
     from concurrent.futures import ThreadPoolExecutor
 
-    with ThreadPoolExecutor(10) as pool:
-        codes = list(pool.map(lambda _: verify(client, code).status_code, range(10)))
-    assert codes.count(200) == 1
+    with ThreadPoolExecutor(20) as pool:
+        codes = list(pool.map(lambda _: verify(client, code).status_code, range(20)))
+    assert codes.count(200) == 1 and codes.count(401) == 19
 
 
 # ---------- хранение и журнал ----------
 
 def test_only_hmac_stored_not_code(env):
-    _, _, service, _ = env
-    code = service.send(MSISDN, "1.1.1.1").code
+    client, _, service, _ = env
+    code = issue(client)
     record = service.store.get(f"otp:{MSISDN}")
     assert code not in json.dumps(record)
     assert len(record["hash"]) == 64  # HMAC-SHA256 hex
@@ -316,12 +408,10 @@ def test_only_hmac_stored_not_code(env):
 
 def test_security_log_has_no_codes(env):
     client, clock, _, log_dir = env
-    codes = []
-    code = send(client).json()["code"]
-    codes.append(code)
+    code = issue(client)
+    codes = [code, wrong(code)]
     for _ in range(5):
         verify(client, wrong(code))
-        codes.append(wrong(code))
     verify(client, code)
 
     with open(os.path.join(log_dir, "security.log"), encoding="utf-8") as f:
@@ -341,7 +431,7 @@ def test_security_log_has_no_codes(env):
 
 def test_dashboard_page_and_events_api(env):
     client, *_ = env
-    code = send(client).json()["code"]
+    code = issue(client)
     for _ in range(5):
         verify(client, wrong(code))
 
@@ -364,7 +454,7 @@ def test_dashboard_page_and_events_api(env):
 
 
 def test_dashboard_token(tmp_path):
-    settings = Settings(secret_key=b"k", log_dir=str(tmp_path), dashboard_token="s3cret")
+    settings = make_settings(tmp_path, dashboard_token="s3cret")
     with running_server(settings) as client:
         assert client.get("/dashboard").status_code == 401
         assert client.get("/api/security/events?token=wrong").status_code == 401
@@ -386,7 +476,7 @@ def test_redis_unavailable_returns_503_fail_closed(tmp_path):
             return fail
 
     store = RedisStore(DownRedis())
-    settings = Settings(secret_key=b"k", log_dir=str(tmp_path))
+    settings = make_settings(tmp_path)
     service = OTPService(settings, SecurityLog(str(tmp_path)), store=store)
     with running_server(settings, service) as client:
         assert send(client).status_code == 503
@@ -459,3 +549,47 @@ def test_security_logs_are_isolated(tmp_path):
     b = (tmp_path / "b" / "security.log").read_text(encoding="utf-8")
     assert "otp_issued" in a and "verify_failed" not in a
     assert "verify_failed" in b and "otp_issued" not in b
+
+
+# ---------- доверенный прокси ----------
+
+@pytest.mark.parametrize("peer, xff, expected", [
+    ("203.0.113.5", "192.0.2.10", "203.0.113.5"),       # недоверенный источник: заголовок игнорируется
+    ("127.0.0.1", "192.0.2.10", "192.0.2.10"),          # доверенный прокси
+    ("127.0.0.1", "6.6.6.6, 192.0.2.10", "192.0.2.10"),  # берётся адрес, добавленный самим прокси
+    ("127.0.0.1", "not-an-ip", "127.0.0.1"),
+    ("127.0.0.1", None, "127.0.0.1"),
+])
+def test_resolve_client_ip(peer, xff, expected):
+    assert resolve_client_ip(peer, xff, frozenset({"127.0.0.1"})) == expected
+
+
+def test_spoofed_forwarded_for_does_not_bypass_ip_limit(env):
+    """Без OTP_TRUSTED_PROXIES смена X-Forwarded-For не даёт обойти лимит 20/мин."""
+    client, *_ = env
+    for i in range(25):
+        req = urllib.request.Request(client.base + "/otp/verify", method="POST",
+                                     data=json.dumps({"msisdn": MSISDN, "code": "000000"}).encode(),
+                                     headers={"Content-Type": "application/json", "X-Forwarded-For": f"10.9.0.{i}"})
+        resp = Client._request(req)
+    assert resp.status_code == 429
+
+
+# ---------- сценарии в формате жюри ----------
+
+SCENARIO_FILES = sorted(glob.glob(os.path.join(os.path.dirname(__file__), "..", "scenarios", "scenarios_*.json")))
+
+
+@pytest.mark.parametrize("path", SCENARIO_FILES, ids=os.path.basename)
+def test_jury_format_scenarios(path):
+    passed, total = run_scenarios.run_file(path)
+    assert total > 0 and passed == total
+
+
+def test_scenario_runner_detects_failure(tmp_path):
+    bad = [{"id": "BAD", "fixture": "", "overrides": {}, "steps": [
+        {"op": "request", "method": "POST", "path": "/otp/send", "body": {"msisdn": "996770730000"},
+         "expected": {"status": 418}}]}]
+    path = tmp_path / "scenarios_bad.json"
+    path.write_text(json.dumps(bad), encoding="utf-8")
+    assert run_scenarios.run_file(str(path)) == (0, 1)

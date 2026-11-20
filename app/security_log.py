@@ -2,7 +2,8 @@
 
 Два независимых канала:
 * SecurityLog — JSON-строки в logs/security.log и консоль. Коды сюда НЕ попадают.
-* SmsGateway  — заглушка SMS-шлюза: код печатается в консоль и logs/sms.log.
+* SmsGateway  — тестовый SMS-транспорт: строка JSON {"ts","msisdn","code"} в outbox/sms.jsonl
+                (формат перехвата жюри) и строка в консоль. Сервис этот файл не читает.
 """
 from __future__ import annotations
 
@@ -12,9 +13,12 @@ import os
 import threading
 import time
 from collections import Counter, deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Callable, Optional
+
+# Asia/Bishkek — UTC+6 без перехода на летнее время; фиксированное смещение не требует tzdata.
+BISHKEK_TZ = timezone(timedelta(hours=6), "Asia/Bishkek")
 
 
 class SecurityEvent(str, Enum):
@@ -30,15 +34,18 @@ class SecurityEvent(str, Enum):
     STORE_UNAVAILABLE = "store_unavailable"
 
 
-def _build_logger(name: str, path: str, fmt: str) -> logging.Logger:
-    """Логгер в файл и консоль.
+def _build_logger(name: str, path: str, fmt: str, console: bool = True) -> logging.Logger:
+    """Логгер в файл и (опционально) консоль.
 
     Создаётся собственный экземпляр, а не глобальный logging.getLogger(name):
     иначе несколько журналов (например, в тестах) перехватывали бы обработчики друг друга.
     """
     logger = logging.Logger(name, logging.INFO)
     formatter = logging.Formatter(fmt)
-    for handler in (logging.FileHandler(path, encoding="utf-8"), logging.StreamHandler()):
+    handlers: list[logging.Handler] = [logging.FileHandler(path, encoding="utf-8")]
+    if console:
+        handlers.append(logging.StreamHandler())
+    for handler in handlers:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     return logger
@@ -80,9 +87,10 @@ class SecurityLog:
     # Штатные события не делают IP подозрительным
     _ROUTINE = frozenset({SecurityEvent.OTP_ISSUED.value, SecurityEvent.VERIFY_SUCCESS.value})
 
-    def __init__(self, log_dir: str, clock: Callable[[], float] = time.time):
+    def __init__(self, log_dir: str, clock: Callable[[], float] = time.time, console: bool = True):
         os.makedirs(log_dir, exist_ok=True)
-        self._logger = _build_logger("otp.security", os.path.join(log_dir, "security.log"), "%(message)s")
+        self._logger = _build_logger("otp.security", os.path.join(log_dir, "security.log"), "%(message)s",
+                                     console=console)
         self._clock = clock
         self._started = clock()
         self._history: deque[tuple[float, dict]] = deque(maxlen=self.HISTORY_SIZE)
@@ -145,14 +153,26 @@ class SecurityLog:
 
 
 class SmsGateway:
-    """Заглушка SMS-шлюза: «отправляет» код в консоль и logs/sms.log."""
+    """Тестовый SMS-транспорт: дописывает каждую выдачу строкой JSON в outbox-файл.
 
-    def __init__(self, log_dir: str):
-        os.makedirs(log_dir, exist_ok=True)
-        self._logger = _build_logger("otp.sms", os.path.join(log_dir, "sms.log"), "%(asctime)s [SMS] %(message)s")
+    Формат задан жюри: {"ts": "2026-11-21T09:00:00+06:00", "msisdn": "...", "code": "012345"}.
+    capture_delivery в сценариях жюри берёт последнюю строку файла для номера.
+    """
+
+    def __init__(self, outbox_path: str, clock: Callable[[], float] = time.time, echo: bool = True):
+        self.path = outbox_path
+        self._clock = clock
+        self._echo = echo
+        self._mutex = threading.Lock()
+        os.makedirs(os.path.dirname(os.path.abspath(outbox_path)), exist_ok=True)
 
     def deliver(self, msisdn: str, code: str) -> None:
-        self._logger.info("to=+%s code=%s", msisdn, code)
+        ts = datetime.fromtimestamp(self._clock(), BISHKEK_TZ).isoformat(timespec="seconds")
+        line = json.dumps({"ts": ts, "msisdn": msisdn, "code": code}, ensure_ascii=False)
+        with self._mutex, open(self.path, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+        if self._echo:
+            print(f"[SMS] {ts} to=+{msisdn} code={code}", flush=True)
 
     def close(self) -> None:
-        _close_logger(self._logger)
+        """Файл открывается на каждую запись — закрывать нечего (метод для единообразия)."""

@@ -21,12 +21,13 @@ services:
       # Ключ HMAC: задайте свой в .env или окружении (OTP_SECRET=...)
       OTP_SECRET: ${OTP_SECRET:-change-me-in-production-please}
       DASHBOARD_TOKEN: ${DASHBOARD_TOKEN:-}
-      OTP_DEBUG_RETURN_CODE: ${OTP_DEBUG_RETURN_CODE:-0}
+      # IP, которым доверяем X-Forwarded-For (например, шлюз docker-сети для стенда жюри)
+      OTP_TRUSTED_PROXIES: ${OTP_TRUSTED_PROXIES:-}
     ports:
       - "8000:8000"
     volumes:
-      # именованный том (а не ./logs): на Linux-хосте bind-mount принадлежал бы root
-      # и непривилегированный пользователь контейнера не смог бы писать логи
+      # тестовый SMS-транспорт: outbox/sms.jsonl появляется в корне репозитория на хосте
+      - ./outbox:/srv/outbox
       - otp-logs:/srv/logs
     restart: unless-stopped
 

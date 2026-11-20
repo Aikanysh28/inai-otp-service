@@ -9,11 +9,13 @@ WORKDIR /srv
 RUN pip install --no-cache-dir "redis>=5,<9"
 
 COPY app ./app
-COPY run.py attack.py ./
+COPY scenarios ./scenarios
+COPY run.py attack.py run_scenarios.py ./
 
-# Непривилегированный пользователь
-RUN useradd --create-home --uid 10001 otp && mkdir -p /srv/logs && chown otp /srv/logs
-USER otp
+# Процесс работает от root внутри контейнера намеренно: outbox/ монтируется с хоста
+# (жюри читает outbox/sms.jsonl в корне репозитория), а у непривилегированного UID
+# контейнера на Linux-хосте не было бы прав записи в эту папку.
+RUN mkdir -p /srv/logs /srv/outbox
 
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --retries=3 \

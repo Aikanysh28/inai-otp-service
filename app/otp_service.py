@@ -50,7 +50,6 @@ class SendResult:
     status: SendStatus
     retry_after: Optional[int] = None  # сек. до следующей разрешённой отправки
     expires_in: Optional[int] = None
-    code: Optional[str] = None  # заполняется только при debug_return_code
 
 
 @dataclass(frozen=True)
@@ -78,7 +77,7 @@ class OTPService:
         self.log = log
         self.clock = clock
         self.store: Store = store or MemoryStore(clock)
-        self.sms = sms or SmsGateway(settings.log_dir)
+        self.sms = sms or SmsGateway(settings.outbox_path, clock)
 
     # ---------- send ----------
 
@@ -109,7 +108,6 @@ class OTPService:
                 SendStatus.SENT,
                 retry_after=_whole_seconds(self._next_send_in(sends, now)),
                 expires_in=self.settings.code_ttl,
-                code=code if self.settings.debug_return_code else None,
             )
 
     def _check_send_allowed(self, msisdn: str, ip: str, sends: list[float], now: float) -> Optional[SendResult]:
@@ -150,10 +148,15 @@ class OTPService:
     # ---------- verify ----------
 
     def verify(self, msisdn: str, code: str, ip: str) -> VerifyResult:
-        limited = self._consume_ip_quota(msisdn, ip)
+        """Полная проверка: IP-лимит, затем код. HTTP-слой вызывает шаги по отдельности,
+        потому что IP-лимит должен списываться и для запросов с ошибкой формата."""
+        limited = self.consume_verify_quota(ip, msisdn)
         if limited is not None:
             return limited
+        return self.verify_code(msisdn, code, ip)
 
+    def verify_code(self, msisdn: str, code: str, ip: str) -> VerifyResult:
+        """Проверка кода без IP-лимита (квоту списывает consume_verify_quota)."""
         with self.store.lock(MSISDN_LOCK.format(msisdn)):
             now = self.clock()
 
@@ -171,18 +174,24 @@ class OTPService:
                 self.log.event(SecurityEvent.VERIFY_EXPIRED, msisdn, ip)
                 return VerifyResult(VerifyStatus.EXPIRED)
 
-            if record is not None and hmac.compare_digest(record["hash"], self._hash(msisdn, code)):
+            if record is None:
+                # Кода нет или он уже использован: 401, но в счётчик ошибок не идёт —
+                # блокировку считают только неверные коды к активному OTP.
+                self.log.event(SecurityEvent.VERIFY_FAILED, msisdn, ip, has_active_code=False)
+                return VerifyResult(VerifyStatus.INVALID)
+
+            if hmac.compare_digest(record["hash"], self._hash(msisdn, code)):
                 self.store.delete(otp_key)  # код одноразовый
                 self.store.delete(FAILS_KEY.format(msisdn))
                 self.log.event(SecurityEvent.VERIFY_SUCCESS, msisdn, ip)
                 return VerifyResult(VerifyStatus.OK)
 
-            # Неверный код, кода нет или он уже использован — попытка засчитывается.
-            return self._register_failure(msisdn, ip, now, has_active_code=record is not None)
+            return self._register_failure(msisdn, ip, now)
 
-    def _consume_ip_quota(self, msisdn: str, ip: str) -> Optional[VerifyResult]:
+    def consume_verify_quota(self, ip: str, msisdn: Optional[str] = None) -> Optional[VerifyResult]:
         """Лимит проверок с IP по всем номерам сразу (защита от распределённого перебора).
 
+        Списывается за любой verify, в том числе с ошибкой формата.
         None — квота есть и одна проверка списана, иначе результат с отказом.
         """
         with self.store.lock(IP_LOCK.format(ip)):
@@ -197,12 +206,13 @@ class OTPService:
             self.store.set(key, hits, ttl=self.settings.ip_verify_window)
             return None
 
-    def _register_failure(self, msisdn: str, ip: str, now: float, has_active_code: bool) -> VerifyResult:
+    def _register_failure(self, msisdn: str, ip: str, now: float) -> VerifyResult:
+        """Неверный код к активному OTP. На max_failed_attempts-й ошибке номер блокируется
+        сразу, и уже этот ответ — 423; блокировка действует [now, now + block_duration)."""
         fails_key = FAILS_KEY.format(msisdn)
         fails = (self.store.get(fails_key) or 0) + 1
         attempts_left = self.settings.max_failed_attempts - fails
-        self.log.event(SecurityEvent.VERIFY_FAILED, msisdn, ip, failed_attempts=fails,
-                       has_active_code=has_active_code)
+        self.log.event(SecurityEvent.VERIFY_FAILED, msisdn, ip, failed_attempts=fails, has_active_code=True)
 
         if attempts_left > 0:
             self.store.set(fails_key, fails, ttl=self.settings.block_duration)
@@ -214,7 +224,7 @@ class OTPService:
         self.store.delete(OTP_KEY.format(msisdn))  # текущий код больше не действует
         self.log.event(SecurityEvent.MSISDN_BLOCKED, msisdn, ip, duration=duration,
                        reason="too_many_failed_attempts")
-        return VerifyResult(VerifyStatus.INVALID, attempts_left=0)
+        return VerifyResult(VerifyStatus.BLOCKED, retry_after=duration)
 
     # ---------- helpers ----------
 

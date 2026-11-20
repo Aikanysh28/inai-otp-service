@@ -6,9 +6,16 @@ import secrets
 from dataclasses import dataclass, field
 
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 def _env_int(name: str, default: int) -> int:
     value = os.getenv(name)
     return int(value) if value else default
+
+
+def _env_list(name: str) -> frozenset[str]:
+    return frozenset(item.strip() for item in os.getenv(name, "").split(",") if item.strip())
 
 
 def _load_secret() -> bytes:
@@ -39,10 +46,14 @@ class Settings:
     ip_verify_window: int = 60  # ... в минуту
 
     log_dir: str = field(default_factory=lambda: os.getenv("OTP_LOG_DIR", "logs"))
-    # Только для автотестов/демо: вернуть код в ответе /otp/send. В проде выключено.
-    debug_return_code: bool = field(
-        default_factory=lambda: os.getenv("OTP_DEBUG_RETURN_CODE", "0") == "1"
+    # Тестовый SMS-транспорт: каждая выдача дописывается строкой JSON в этот файл
+    # (формат жюри: {"ts", "msisdn", "code"}). Сервис этот файл не читает.
+    outbox_path: str = field(
+        default_factory=lambda: os.getenv("OTP_OUTBOX", os.path.join(PROJECT_ROOT, "outbox", "sms.jsonl"))
     )
+    # IP соединений, которым доверяем заголовок X-Forwarded-For (например, тестовый стенд жюри
+    # на 127.0.0.1). По умолчанию пусто: IP берётся только из сокета.
+    trusted_proxies: frozenset[str] = field(default_factory=lambda: _env_list("OTP_TRUSTED_PROXIES"))
 
     # Хранилище: пусто — в памяти процесса; иначе Redis, напр. redis://localhost:6379/0
     redis_url: str = field(default_factory=lambda: os.getenv("REDIS_URL", ""))
