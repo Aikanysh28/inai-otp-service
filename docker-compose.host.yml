@@ -1,0 +1,20 @@
+# Linux: сервис в сети хоста — IP клиента берётся из подключения как есть (127.0.0.1, 127.0.0.2).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.host.yml up --build
+#
+# Зачем: в обычном режиме (bridge) подключения с localhost к опубликованному порту проходят
+# через docker-proxy, и сервис видит адрес шлюза Docker вместо адреса клиента — разные
+# клиенты сливаются в один IP для лимита 20 проверок в минуту.
+services:
+  redis:
+    # Redis остаётся в сети Docker; порт открыт только на loopback хоста и нестандартный,
+    # чтобы не конфликтовать с локальным Redis на 6379.
+    ports:
+      - "127.0.0.1:16379:6379"
+
+  otp:
+    network_mode: host
+    ports: !reset []
+    environment:
+      REDIS_URL: redis://127.0.0.1:16379/0
+      HOST: ${OTP_BIND_ADDRESS:-0.0.0.0}
