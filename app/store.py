@@ -1,7 +1,7 @@
 """Key-value хранилища с TTL: в памяти процесса и в Redis.
 
-Оба реализуют один интерфейс:
-    get(key) / set(key, value, ttl) / delete(key) / lock(name)
+Оба реализуют протокол Store:
+    get(key) / set(key, value, ttl) / delete(key) / lock(name) / ping()
 
 lock(name) — взаимное исключение для секции «прочитать-проверить-записать».
 В памяти это threading-блокировки, в Redis — распределённая блокировка
@@ -16,14 +16,36 @@ import threading
 import time
 import zlib
 from contextlib import contextmanager
-from typing import Any, Callable, Iterator, Optional
+from typing import Any, Callable, ContextManager, Iterator, Optional, Protocol
+
+try:  # redis нужен только для RedisStore: без него сервис работает на stdlib
+    import redis
+except ImportError:  # pragma: no cover
+    redis = None
 
 
 class StoreUnavailable(Exception):
     """Хранилище недоступно или блокировку не удалось взять вовремя (-> HTTP 503)."""
 
 
+class Store(Protocol):
+    name: str
+
+    def get(self, key: str) -> Any: ...
+
+    def set(self, key: str, value: Any, ttl: Optional[float] = None) -> None: ...
+
+    def delete(self, key: str) -> None: ...
+
+    def lock(self, name: str) -> ContextManager[None]: ...
+
+    def ping(self) -> bool: ...
+
+
 class MemoryStore:
+    """Хранилище в памяти процесса. TTL отсчитывается по переданным часам."""
+
+    name = "memory"
     LOCK_STRIPES = 64
     CLEANUP_EVERY = 1000  # раз в N записей удаляем просроченные ключи
 
@@ -36,15 +58,13 @@ class MemoryStore:
         self._stripes = [threading.Lock() for _ in range(self.LOCK_STRIPES)]
         self._writes = 0
 
-    name = "memory"
-
     def get(self, key: str) -> Any:
         with self._mutex:
             item = self._data.get(key)
             if item is None:
                 return None
             value, expires_at = item
-            if expires_at is not None and self._clock() >= expires_at:
+            if self._expired(expires_at, self._clock()):
                 del self._data[key]
                 return None
             return value
@@ -55,7 +75,7 @@ class MemoryStore:
             self._data[key] = (value, expires_at)
             self._writes += 1
             if self._writes % self.CLEANUP_EVERY == 0:
-                self._cleanup_locked()
+                self._remove_expired()
 
     def delete(self, key: str) -> None:
         with self._mutex:
@@ -67,22 +87,29 @@ class MemoryStore:
         with stripe:
             yield
 
-    def _cleanup_locked(self) -> None:
-        now = self._clock()
-        expired = [k for k, (_, exp) in self._data.items() if exp is not None and now >= exp]
-        for key in expired:
-            del self._data[key]
-
     def ping(self) -> bool:
         return True
+
+    @staticmethod
+    def _expired(expires_at: Optional[float], now: float) -> bool:
+        return expires_at is not None and now >= expires_at
+
+    def _remove_expired(self) -> None:
+        """Вызывается под self._mutex."""
+        now = self._clock()
+        for key in [k for k, (_, exp) in self._data.items() if self._expired(exp, now)]:
+            del self._data[key]
 
 
 class RedisStore:
     """Хранилище в Redis. Значения сериализуются в JSON, TTL — нативный (PX)."""
 
     name = "redis"
+    LOCK_POLL_INTERVAL = 0.002
 
     def __init__(self, client, prefix: str = "otp:", lock_ttl: float = 5.0, lock_wait: float = 5.0):
+        if redis is None:  # pragma: no cover
+            raise RuntimeError("Для Redis нужен пакет redis: pip install redis")
         self.r = client
         self.prefix = prefix
         self.lock_ttl = lock_ttl
@@ -90,62 +117,62 @@ class RedisStore:
 
     @classmethod
     def from_url(cls, url: str, **kwargs) -> "RedisStore":
-        try:
-            import redis  # импорт только если включён Redis: без него сервис работает на stdlib
-        except ImportError as e:  # pragma: no cover
-            raise RuntimeError("REDIS_URL задан, но пакет redis не установлен: pip install redis") from e
+        if redis is None:  # pragma: no cover
+            raise RuntimeError("REDIS_URL задан, но пакет redis не установлен: pip install redis")
         client = redis.Redis.from_url(url, socket_timeout=3, socket_connect_timeout=3)
         return cls(client, **kwargs)
 
-    def _k(self, key: str) -> str:
+    def _key(self, key: str) -> str:
         return self.prefix + key
 
     @contextmanager
-    def _errors(self) -> Iterator[None]:
+    def _translate_errors(self) -> Iterator[None]:
+        """Любая ошибка Redis (соединение, таймаут, ...) превращается в StoreUnavailable."""
         try:
             yield
-        except StoreUnavailable:
-            raise
-        except Exception as e:  # ConnectionError, TimeoutError и т.п. из redis-py
-            if type(e).__module__.startswith("redis"):
-                raise StoreUnavailable(f"redis error: {e}") from e
-            raise
+        except redis.RedisError as e:
+            raise StoreUnavailable(f"redis error: {e}") from e
 
     def get(self, key: str) -> Any:
-        with self._errors():
-            raw = self.r.get(self._k(key))
+        with self._translate_errors():
+            raw = self.r.get(self._key(key))
         return None if raw is None else json.loads(raw)
 
     def set(self, key: str, value: Any, ttl: Optional[float] = None) -> None:
         px = max(1, int(ttl * 1000)) if ttl is not None else None
-        with self._errors():
-            self.r.set(self._k(key), json.dumps(value), px=px)
+        with self._translate_errors():
+            self.r.set(self._key(key), json.dumps(value), px=px)
 
     def delete(self, key: str) -> None:
-        with self._errors():
-            self.r.delete(self._k(key))
+        with self._translate_errors():
+            self.r.delete(self._key(key))
 
     @contextmanager
     def lock(self, name: str) -> Iterator[None]:
-        key = self._k("lock:" + name)
+        key = self._key("lock:" + name)
         token = secrets.token_hex(16)
-        deadline = time.monotonic() + self.lock_wait
-        with self._errors():
-            # TTL у блокировки защищает от «вечного» замка, если процесс упал внутри секции.
-            while not self.r.set(key, token, nx=True, px=int(self.lock_ttl * 1000)):
-                if time.monotonic() >= deadline:
-                    raise StoreUnavailable(f"lock {name!r} timeout")
-                time.sleep(0.002)
+        self._acquire(key, token, name)
         try:
             yield
         finally:
             self._release(key, token)
 
-    def _release(self, key: str, token: str) -> None:
-        # Удаляем блокировку, только если она всё ещё наша (compare-and-delete через WATCH).
-        import redis
+    def ping(self) -> bool:
+        with self._translate_errors():
+            return bool(self.r.ping())
 
-        with self._errors(), self.r.pipeline() as pipe:
+    def _acquire(self, key: str, token: str, name: str) -> None:
+        deadline = time.monotonic() + self.lock_wait
+        with self._translate_errors():
+            # TTL у блокировки защищает от «вечного» замка, если процесс упал внутри секции.
+            while not self.r.set(key, token, nx=True, px=int(self.lock_ttl * 1000)):
+                if time.monotonic() >= deadline:
+                    raise StoreUnavailable(f"lock {name!r} timeout")
+                time.sleep(self.LOCK_POLL_INTERVAL)
+
+    def _release(self, key: str, token: str) -> None:
+        """Снять блокировку, только если она всё ещё наша (compare-and-delete через WATCH)."""
+        with self._translate_errors(), self.r.pipeline() as pipe:
             try:
                 pipe.watch(key)
                 current = pipe.get(key)
@@ -157,7 +184,3 @@ class RedisStore:
                     pipe.unwatch()
             except redis.WatchError:
                 pass  # ключ изменился => блокировка уже не наша (истекла)
-
-    def ping(self) -> bool:
-        with self._errors():
-            return bool(self.r.ping())

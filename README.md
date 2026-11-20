@@ -28,7 +28,7 @@ python attack.py                                   # локальный запу
 docker compose exec otp python attack.py --pause 0 # в Docker (коды читаются из логов контейнера)
 ```
 
-Тесты (46 шт., все сценарии гоняются и на памяти, и на Redis через fakeredis):
+Тесты (53 шт., все сценарии гоняются и на памяти, и на Redis через fakeredis):
 
 ```bash
 pip install -r requirements.txt
@@ -157,11 +157,12 @@ run.py               точка входа
 app/config.py        параметры (TTL, лимиты, задержки)
 app/store.py         KV-хранилища с TTL и блокировками: MemoryStore и RedisStore
 app/otp_service.py   бизнес-логика: генерация, HMAC, лимиты, блокировки
-app/security_log.py  журнал безопасности + заглушка SMS-шлюза
-app/main.py          HTTP-слой (http.server), валидация, маппинг статусов, дашборд API
+app/security_log.py  журнал событий безопасности (SecurityEvent, SecurityLog) + заглушка SMS-шлюза (SmsGateway)
+app/api.py           слой API без привязки к HTTP-серверу: валидация, маршруты, коды ответов, дашборд API
+app/main.py          HTTP-сервер (http.server) и сборка зависимостей
 app/static/dashboard.html  дашборд событий безопасности
 attack.py            демонстрация атак
-tests/test_otp.py    46 тестов (pytest): сценарии x {память, Redis}, дашборд, отказ Redis
+tests/test_otp.py    53 теста (pytest): сценарии x {память, Redis}, дашборд, отказ Redis, HTTP-слой
 Dockerfile, docker-compose.yml
 ```
 
