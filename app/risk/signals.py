@@ -88,6 +88,15 @@ class WindowStats:
         # number_blocked и store_unavailable в счётчики попыток не входят
 
 
+def plural(n: int, one: str, few: str, many: str) -> str:
+    """Русское склонение: 1 номер, 2 номера, 5 номеров."""
+    if n % 10 == 1 and n % 100 != 11:
+        return one
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return few
+    return many
+
+
 def _minutes(seconds: int) -> str:
     return f"{seconds // 60} мин" if seconds % 60 == 0 else f"{seconds} с"
 
@@ -101,7 +110,8 @@ def fan_out(stats: WindowStats, s: RiskSettings) -> Optional[Signal]:
     else:
         return None
     return Signal("fan_out", points,
-                  f"коды запрошены на {count} номеров за {_minutes(stats.window)}")
+                  f"коды запрошены на {count} {plural(count, 'номер', 'номера', 'номеров')} "
+                  f"за {_minutes(stats.window)}")
 
 
 def sequential(stats: WindowStats, s: RiskSettings) -> Optional[Signal]:

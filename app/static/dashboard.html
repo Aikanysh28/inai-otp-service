@@ -100,17 +100,66 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .bar-cell { display: flex; align-items: center; gap: 8px; }
   .bar-cell .bar { height: 8px; border-radius: 0 4px 4px 0; background: var(--series-4); min-width: 2px; }
+
+  /* ---------- вкладка «Риски» ---------- */
+  [hidden] { display: none !important; }
+  .risk-tabs { display: inline-flex; gap: 4px; }
+  .risk-tabs .badge { margin-left: 6px; font-size: 11px; }
+  .risk-mode { font-size: 12px; color: var(--text-secondary); background: var(--surface-1); border: 1px dashed var(--border); border-radius: 8px; padding: 6px 10px; margin-bottom: 12px; }
+  .risk-notice strong { display: block; color: var(--critical-text); margin-bottom: 4px; }
+  .risk-status:empty { display: none; }
+  .risk-status { margin-top: 6px; }
+  .risk-sub { margin: -4px 0 8px; }
+  .tile .value.risk-value-sm { font-size: 20px; }
+  .risk-big::before { width: 14px; height: 14px; }
+  .risk-filter { display: inline-flex; gap: 4px; font-weight: 400; }
+  .risk-row { cursor: pointer; }
+  .risk-row:hover td, .risk-row[aria-selected="true"] td { background: var(--grid); }
+  .risk-row:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
+  .risk-chips { margin-bottom: 0; gap: 4px; }
+  .risk-chip { font-size: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; color: var(--text-secondary); white-space: nowrap; }
+  .risk-now { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+  .risk-spark { width: 60px; height: 16px; display: block; color: var(--text-secondary); }
+  .risk-tag { font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; margin-left: 6px; color: var(--text-secondary); white-space: nowrap; }
+  .risk-link { font: inherit; background: none; border: none; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; }
+  .risk-detail-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 4px; }
+  .risk-detail-head .risk-ip { font-size: 18px; font-weight: 650; }
+  .risk-scale { position: relative; margin: 14px 0 26px; }
+  .risk-breakdown { position: relative; height: 28px; border-radius: 6px; background: var(--grid); overflow: hidden; }
+  .risk-seg { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--surface-1); border-right: 2px solid var(--surface-1); overflow: hidden; white-space: nowrap; }
+  .risk-seg.risk-over { opacity: .35; }
+  .risk-mark { position: absolute; top: -4px; height: 36px; border-left: 2px dashed var(--text-secondary); }
+  .risk-mark span { position: absolute; top: 38px; left: -2px; transform: translateX(-50%); font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+  .risk-reasons { list-style: none; margin: 0; padding: 0; }
+  .risk-reasons li { display: flex; gap: 10px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--grid); }
+  .risk-reasons i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex: none; }
+  .risk-reasons b { min-width: 150px; font-weight: 600; }
+  .risk-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 12px 0; }
+  .risk-stat { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+  .risk-stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .risk-stat span { color: var(--text-secondary); font-size: 12px; }
+  .risk-alert { border: 1px solid var(--border); border-left: 4px solid var(--c); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .risk-alert-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 2px; }
+  .risk-new { animation: risk-flash 2.5s ease-out; }
+  @keyframes risk-flash { from { box-shadow: 0 0 0 3px var(--warning); } to { box-shadow: 0 0 0 0 transparent; } }
+  .risk-footer { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-muted); }
+  .risk-tip-title { font-weight: 600; margin-bottom: 4px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>Журнал безопасности OTP</h1>
+    <div class="risk-tabs" role="tablist" aria-label="Разделы админки">
+      <button id="tabbtn-security" role="tab" aria-selected="true" aria-pressed="true" aria-controls="tab-security" tabindex="0">Журнал</button>
+      <button id="tabbtn-risk" role="tab" aria-selected="false" aria-pressed="false" aria-controls="tab-risk" tabindex="-1">Риски<span class="badge s-critical" id="risk-count" hidden></span></button>
+    </div>
     <span class="meta" id="meta">загрузка…</span>
     <span class="spacer"></span>
     <button id="live" aria-pressed="true"><span class="live-dot"></span>Обновление: вкл</button>
   </header>
 
+  <div id="tab-security" role="tabpanel" aria-labelledby="tabbtn-security">
   <section class="tiles" id="tiles"></section>
 
   <section class="card">
@@ -141,6 +190,63 @@
     <div class="chips" id="filters"></div>
     <div class="scroll" id="events"></div>
   </section>
+  </div>
+
+  <div id="tab-risk" role="tabpanel" aria-labelledby="tabbtn-risk" hidden>
+    <div class="card risk-notice" id="risk-notice" role="alert" hidden></div>
+    <div id="risk-body">
+      <div class="risk-mode" id="risk-mode" hidden>Режим наблюдения: модуль оценивает риск и поднимает тревоги, но не меняет ответы сервиса. «В бою» — что было бы сделано при включённой защите.</div>
+
+      <section class="tiles" id="risk-tiles"><div class="empty">Загрузка…</div></section>
+      <div class="details err risk-status" id="risk-st-overview"></div>
+
+      <div class="grid2">
+        <section class="card">
+          <h2>Динамика риска, последний час</h2>
+          <div class="details risk-sub">События по минутам; цвет — уровень риска IP в момент события. Время по Бишкеку.</div>
+          <div class="legend" id="risk-timeline-legend"></div>
+          <div class="chart-box" id="risk-timeline-box">
+            <svg class="chart" id="risk-timeline-svg" role="img" aria-label="Столбцы событий по минутам, сложенные по уровням риска"></svg>
+            <div class="tooltip" id="risk-timeline-tip"></div>
+          </div>
+          <div class="details err risk-status" id="risk-st-timeline"></div>
+        </section>
+        <section class="card">
+          <h2>«Подметание» номеров, 30 минут</h2>
+          <div class="details risk-sub">Обычные пользователи — случайное облако. Бот, перебирающий номера подряд, рисует линию.</div>
+          <div class="legend" id="risk-scatter-legend"></div>
+          <div class="chart-box" id="risk-scatter-box">
+            <svg class="chart" id="risk-scatter-svg" role="img" aria-label="Точечная диаграмма: время и последние 4 цифры номера"></svg>
+            <div class="tooltip" id="risk-scatter-tip"></div>
+          </div>
+          <div class="details err risk-status" id="risk-st-scatter"></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2>Топ IP <span class="spacer"></span>
+          <span class="risk-filter" id="risk-filter" role="group" aria-label="Фильтр по уровню">
+            <button data-level="low" aria-pressed="true">Все</button>
+            <button data-level="medium" aria-pressed="false">medium и выше</button>
+            <button data-level="high" aria-pressed="false">только high</button>
+          </span></h2>
+        <div class="details risk-sub">Оценка на момент последней активности IP за час. Клик или Enter — разбор балла.</div>
+        <div class="scroll" id="risk-ips"><div class="empty">Загрузка…</div></div>
+        <div class="details err risk-status" id="risk-st-ips"></div>
+      </section>
+
+      <section class="card" id="risk-detail" aria-live="polite" hidden></section>
+
+      <section class="card">
+        <h2>Лента тревог</h2>
+        <div id="risk-alerts"><div class="empty">Загрузка…</div></div>
+        <div class="details err risk-status" id="risk-st-alerts"></div>
+      </section>
+
+      <footer class="risk-footer" id="risk-footer"></footer>
+      <div class="details err risk-status" id="risk-st-meta"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -341,8 +447,625 @@
   }
 
   load();
-  setInterval(() => { if (live && !document.hidden) load(); }, 2000);
+  // журнал опрашивается, только пока открыта его вкладка; при возврате на неё — сразу
+  setInterval(() => { if (live && !document.hidden && !$("tab-security").hidden) load(); }, 2000);
+  window.addEventListener("otp-dashboard-tab", e => { if (e.detail === "security" && live) load(); });
   window.addEventListener("resize", () => data && renderChart());
+})();
+</script>
+<script id="risk-script">
+/* Вкладка «Риски». Данные API выводятся только через textContent / createElement. */
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const token = new URLSearchParams(location.search).get("token");
+  const FAST_MS = 2000, SLOW_MS = 5000, MAX_ALERTS = 100, MAX_POINTS = 3000, FLASH_MS = 2500;
+  const DETAIL_EVENTS = 20;
+  const EMPTY_TEXT = "Пока нет данных — запустите attack.py";
+  const TAB_KEY = "otp-dashboard-tab";
+
+  // Уровни: цвет всегда вместе с текстом
+  const LEVELS = {
+    low:    { name: "low",    badge: "s-good",     color: "var(--good)" },
+    medium: { name: "medium", badge: "s-warning",  color: "var(--warning)" },
+    high:   { name: "high",   badge: "s-critical", color: "var(--critical)" },
+  };
+  const LEVEL_KEYS = ["low", "medium", "high"];
+  const lvl = level => LEVELS[level] || LEVELS.low;
+  const SIGNALS = {
+    fan_out: "Веер", sequential: "Подряд", no_conversion: "Без подтверждений", fail_rate: "Ошибки ввода",
+    new_ip: "Новый IP", hammering_locked: "Атака на блок", ip_limited: "Лимит IP", night: "Ночь",
+  };
+  const EVENTS = {
+    send_ok: "Код выдан", send_rejected: "Отказ в выдаче", verify_ok: "Код подтверждён",
+    verify_fail: "Неверный код", verify_expired: "Код истёк", number_blocked: "Номер заблокирован",
+    verify_locked: "Проверка заблок. номера", ip_rate_limited: "Лимит проверок по IP",
+    bad_request: "Неверный запрос", store_unavailable: "Хранилище недоступно",
+  };
+  const SEG_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-4)", "var(--series-3)"];
+
+  // ---------- форматирование: время всегда по Бишкеку ----------
+  const tz = { timeZone: "Asia/Bishkek" };
+  const fHM = new Intl.DateTimeFormat("ru-RU", { ...tz, hour: "2-digit", minute: "2-digit" });
+  const fHMS = new Intl.DateTimeFormat("ru-RU", { ...tz, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const fDT = new Intl.DateTimeFormat("ru-RU", { ...tz, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const hm = s => fHM.format(new Date(s * 1000));
+  const hms = s => fHMS.format(new Date(s * 1000));
+  const dt = s => fDT.format(new Date(s * 1000));
+  const num = n => Number(n || 0).toLocaleString("ru-RU");
+  const tail4 = t => String(t).padStart(4, "0");
+
+  // ---------- DOM ----------
+  function el(tag, props, ...children) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props || {})) {
+      if (value == null || value === false) continue;
+      if (key === "class") node.className = value;
+      else if (key === "text") node.textContent = value;
+      else if (key === "style") Object.assign(node.style, value);
+      else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+      else node.setAttribute(key, value === true ? "" : String(value));
+    }
+    for (const child of children.flat()) {
+      if (child == null || child === false) continue;
+      node.append(child instanceof Node ? child : String(child));
+    }
+    return node;
+  }
+  function svgEl(tag, attrs, text) {
+    const node = document.createElementNS(SVG_NS, tag);
+    for (const [key, value] of Object.entries(attrs || {})) node.setAttribute(key, String(value));
+    if (text != null) node.textContent = text;
+    return node;
+  }
+  const levelBadge = (level, extraClass) =>
+    el("span", { class: `badge ${lvl(level).badge}${extraClass ? " " + extraClass : ""}`, text: lvl(level).name });
+  const empty = text => el("div", { class: "empty", text: text || EMPTY_TEXT });
+  function niceMax(v) {
+    if (v <= 4) return 4;
+    const p = Math.pow(10, Math.floor(Math.log10(v)));
+    for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p;
+    return 10 * p;
+  }
+
+  // ---------- состояние ----------
+  const state = {
+    tab: "security", now: null,
+    overview: null, ips: null, timeline: null, scatter: null, meta: null, detail: null,
+    alerts: [], lastAlertId: 0, alertsLoaded: false, alertsDirty: false, scatterShown: [], unseen: 0, fresh: new Map(),
+    minLevel: "low", selected: null, detailMissing: false, fatal: null,
+    busyFast: false, busySlow: false, busyCount: false,
+  };
+
+  // ---------- API ----------
+  class ApiError extends Error {
+    constructor(kind, status) { super(kind); this.kind = kind; this.status = status; }
+  }
+  async function api(path, params) {
+    const url = new URL(path, location.origin);
+    for (const [key, value] of Object.entries(params || {})) url.searchParams.set(key, value);
+    let res;
+    try {
+      res = await fetch(url, { cache: "no-store", headers: token ? { "X-Dashboard-Token": token } : {} });
+    } catch (e) {
+      throw new ApiError("network", 0);
+    }
+    let body = null;
+    try { body = await res.json(); } catch (e) { body = null; }
+    if (res.ok) return body;
+    if (res.status === 401) throw new ApiError("auth", 401);
+    if (res.status === 503 && body && body.status === "risk_disabled") throw new ApiError("disabled", 503);
+    if (res.status === 404) throw new ApiError("not_found", 404);
+    throw new ApiError("error", res.status);
+  }
+
+  function setFatal(kind) {
+    if (state.fatal === kind) return;
+    state.fatal = kind;
+    const box = $("risk-notice");
+    if (!kind) { box.hidden = true; $("risk-body").hidden = false; return; }
+    const auth = kind === "auth";
+    box.replaceChildren(
+      el("strong", { text: auth ? "Нужен токен админки (?token=...)" : "Модуль рисков выключен (RISK_ENABLED=0)" }),
+      el("div", { class: "details", text: auth
+        ? "Откройте страницу как /dashboard?token=<DASHBOARD_TOKEN>#risk."
+        : "Вкладка «Журнал» работает как обычно. Включите модуль и перезапустите сервис." }));
+    box.hidden = false;
+    $("risk-body").hidden = true;
+  }
+
+  // Загрузка одного блока: ошибка блока не ломает остальные
+  async function guard(block, fetcher, apply, retryMs) {
+    const status = $("risk-st-" + block);
+    try {
+      const data = await fetcher();
+      setFatal(null);
+      if (status) status.textContent = "";
+      apply(data);
+    } catch (e) {
+      const kind = e instanceof ApiError ? e.kind : "error";
+      if (kind === "auth" || kind === "disabled") { setFatal(kind); return; }
+      if (kind === "not_found" && block === "detail") { state.detailMissing = true; renderDetail(); return; }
+      if (status) status.textContent = `Нет данных, повторим через ${Math.round(retryMs / 1000)} с`;
+      if (!(e instanceof ApiError)) console.error(e);
+    }
+  }
+
+  // ---------- 1–2. Плашка режима и плитки ----------
+  function renderTiles() {
+    const o = state.overview;
+    if (!o) return;
+    const tile = (label, value, sub, small) => el("div", { class: "tile" },
+      el("div", { class: "label", text: label }),
+      el("div", { class: "value" + (small ? " risk-value-sm" : "") }, value),
+      el("div", { class: "sub", text: sub || " " }));
+    const conversion = o.conversion == null ? "—"
+      : (o.conversion * 100).toLocaleString("ru-RU", { maximumFractionDigits: 1 }) + "%";
+    $("risk-tiles").replaceChildren(
+      tile("Уровень угрозы", levelBadge(o.threat_level, "risk-big"), "сейчас"),
+      tile("IP под наблюдением", `${num(o.ips_high)} high · ${num(o.ips_medium)} medium`,
+        `из ${num(o.ips_active)} активных`, true),
+      tile("Тревоги", num(o.alerts), "за час"),
+      tile("Подозрительные SMS", `${num(o.sms_suspicious)} из ${num(o.sms_sent)}`,
+        `≈ ${num(o.sms_cost_suspicious)} ${o.currency} потрачено ботами`, true),
+      tile("Конверсия", conversion, "подтверждено / отправлено"),
+    );
+  }
+
+  // ---------- 3. Динамика риска ----------
+  function renderTimeline() {
+    const rows = state.timeline, svg = $("risk-timeline-svg");
+    if (!rows) return;
+    const W = svg.clientWidth || 560, H = 220, padL = 36, padR = 4, padT = 8, padB = 22;
+    const cw = W - padL - padR, ch = H - padT - padB;
+    const totals = rows.map(r => LEVEL_KEYS.reduce((a, k) => a + (r[k] || 0), 0));
+    const max = niceMax(Math.max(...totals, 1));
+    const step = cw / Math.max(1, rows.length), bw = Math.max(1, Math.min(18, step * 0.7));
+    const y = v => padT + ch - (v / max) * ch;
+    const nodes = [];
+    for (let i = 0; i <= 4; i++) {
+      const v = max * i / 4, yy = y(v);
+      nodes.push(svgEl("line", { x1: padL, x2: W - padR, y1: yy, y2: yy, stroke: "var(--grid)", "stroke-width": 1 }));
+      nodes.push(svgEl("text", { x: padL - 6, y: yy + 4, "text-anchor": "end" }, num(v)));
+    }
+    rows.forEach((r, i) => {
+      const x = padL + i * step + (step - bw) / 2;
+      let acc = 0;
+      for (const key of LEVEL_KEYS) {
+        const v = r[key] || 0;
+        if (!v) continue;
+        const y0 = y(acc), y1 = y(acc + v);
+        acc += v;
+        nodes.push(svgEl("rect", { x, y: y1, width: bw, height: Math.max(1, y0 - y1), fill: lvl(key).color }));
+      }
+      if (r.t % 600 === 0)
+        nodes.push(svgEl("text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle" }, hm(r.t)));
+      nodes.push(svgEl("rect", { "data-i": i, x: padL + i * step, y: padT, width: step, height: ch, fill: "transparent" }));
+    });
+    nodes.push(svgEl("line", { x1: padL, x2: W - padR, y1: y(0), y2: y(0), stroke: "var(--border)", "stroke-width": 1 }));
+    if (totals.every(t => !t))
+      nodes.push(svgEl("text", { x: padL + cw / 2, y: padT + ch / 2, "text-anchor": "middle" }, EMPTY_TEXT));
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.replaceChildren(...nodes);
+  }
+
+  function showTip(tip, box, e, children) {
+    tip.replaceChildren(...children);
+    tip.style.display = "block";
+    const rect = box.getBoundingClientRect();
+    let left = e.clientX - rect.left + 14;
+    if (left + tip.offsetWidth > rect.width) left = e.clientX - rect.left - tip.offsetWidth - 14;
+    tip.style.left = Math.max(0, left) + "px";
+    tip.style.top = Math.max(0, e.clientY - rect.top - 20) + "px";
+  }
+  const tipRow = (color, label, value) => el("div", { class: "row" },
+    el("span", null, color ? el("i", { style: { background: color } }) : null, label),
+    el("span", { text: value }));
+
+  $("risk-timeline-svg").addEventListener("mousemove", e => {
+    const hit = e.target.closest("[data-i]"), tip = $("risk-timeline-tip");
+    const r = hit && state.timeline && state.timeline[+hit.getAttribute("data-i")];
+    if (!r) { tip.style.display = "none"; return; }
+    showTip(tip, $("risk-timeline-box"), e, [
+      el("div", { class: "risk-tip-title", text: `${hm(r.t)}–${hm(r.t + 60)} по Бишкеку` }),
+      ...LEVEL_KEYS.slice().reverse().map(k => tipRow(lvl(k).color, `события IP уровня ${k}`, num(r[k]))),
+    ]);
+  });
+  $("risk-timeline-svg").addEventListener("mouseleave", () => { $("risk-timeline-tip").style.display = "none"; });
+
+  // ---------- 4. «Подметание» ----------
+  function renderScatter() {
+    const all = state.scatter, svg = $("risk-scatter-svg");
+    if (!all) return;
+    const points = all.length > MAX_POINTS ? all.slice(-MAX_POINTS) : all;
+    const W = svg.clientWidth || 560, H = 220, padL = 40, padR = 8, padT = 8, padB = 22, WINDOW = 1800;
+    const cw = W - padL - padR, ch = H - padT - padB;
+    const lastT = points.length ? points[points.length - 1].t : 0;
+    const t1 = Math.max(state.now || 0, lastT) || Date.now() / 1000, t0 = t1 - WINDOW;
+    const x = t => padL + Math.min(1, Math.max(0, (t - t0) / WINDOW)) * cw;
+    const y = tail => padT + ch - (tail / 9999) * ch;
+    const nodes = [];
+    for (const v of [0, 2500, 5000, 7500, 9999]) {
+      nodes.push(svgEl("line", { x1: padL, x2: W - padR, y1: y(v), y2: y(v), stroke: "var(--grid)", "stroke-width": 1 }));
+      nodes.push(svgEl("text", { x: padL - 6, y: y(v) + 4, "text-anchor": "end" }, tail4(v)));
+    }
+    if (t1) for (let t = Math.ceil(t0 / 300) * 300; t <= t1; t += 300)
+      nodes.push(svgEl("text", { x: x(t), y: H - 6, "text-anchor": "middle" }, hm(t)));
+    nodes.push(svgEl("line", { x1: padL, x2: W - padR, y1: y(0), y2: y(0), stroke: "var(--border)", "stroke-width": 1 }));
+    // высокий уровень рисуется поверх
+    const order = points.map((p, i) => i).sort((a, b) =>
+      (LEVEL_KEYS.indexOf(points[a].level) - LEVEL_KEYS.indexOf(points[b].level)) || a - b);
+    for (const i of order) {
+      const p = points[i], color = lvl(p.level).color, rejected = p.event === "send_rejected";
+      nodes.push(svgEl("circle", {
+        "data-i": i, cx: x(p.t), cy: y(p.tail), r: 3.5,
+        fill: rejected ? "none" : color, stroke: color, "stroke-width": rejected ? 1.5 : 0.5,
+      }));
+    }
+    if (!points.length)
+      nodes.push(svgEl("text", { x: padL + cw / 2, y: padT + ch / 2, "text-anchor": "middle" }, EMPTY_TEXT));
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.replaceChildren(...nodes);
+    svg.dataset.count = String(points.length);
+    state.scatterShown = points;
+  }
+
+  $("risk-scatter-svg").addEventListener("mousemove", e => {
+    const hit = e.target.closest("circle[data-i]"), tip = $("risk-scatter-tip");
+    const p = hit && state.scatterShown && state.scatterShown[+hit.getAttribute("data-i")];
+    if (!p) { tip.style.display = "none"; return; }
+    showTip(tip, $("risk-scatter-box"), e, [
+      el("div", { class: "risk-tip-title", text: `${hms(p.t)} по Бишкеку` }),
+      tipRow(null, "IP", p.ip), tipRow(null, "последние 4 цифры", tail4(p.tail)),
+      tipRow(null, "событие", EVENTS[p.event] || p.event), tipRow(lvl(p.level).color, "уровень IP", p.level),
+    ]);
+  });
+  $("risk-scatter-svg").addEventListener("mouseleave", () => { $("risk-scatter-tip").style.display = "none"; });
+
+  function renderLegends() {
+    const levelItems = LEVEL_KEYS.map(k => el("span", null, el("i", { style: { background: lvl(k).color } }), k));
+    $("risk-timeline-legend").replaceChildren(...levelItems);
+    $("risk-scatter-legend").replaceChildren(
+      ...LEVEL_KEYS.map(k => el("span", null, el("i", { style: { background: lvl(k).color } }), k)),
+      el("span", { text: "● код выдан · ○ отказ в выдаче" }));
+  }
+
+  // ---------- 5. Топ IP ----------
+  function sparkline(values) {
+    const svg = svgEl("svg", { class: "risk-spark", viewBox: "0 0 60 16", role: "img",
+      "aria-label": `событий по минутам: ${values.join(", ")}` });
+    const max = Math.max(1, ...values), n = Math.max(1, values.length - 1);
+    const pts = values.map((v, i) => `${(i / n * 58 + 1).toFixed(1)},${(15 - v / max * 14).toFixed(1)}`).join(" ");
+    svg.append(svgEl("polyline", { points: pts, fill: "none", stroke: "currentColor", "stroke-width": 1.5 }));
+    return svg;
+  }
+  const reasonChips = reasons => reasons.length
+    ? el("div", { class: "chips risk-chips" }, reasons.map(r => el("span", {
+        class: "risk-chip", title: r.detail, text: `${SIGNALS[r.name] || r.name} +${r.points}` })))
+    : el("span", { class: "details", text: "—" });
+
+  function renderIps() {
+    const rows = state.ips, box = $("risk-ips");
+    if (!rows) return;
+    if (!rows.length) {
+      box.replaceChildren(empty(state.minLevel === "low" ? EMPTY_TEXT : "Нет IP с таким уровнем"));
+      return;
+    }
+    const focusedIp = document.activeElement && document.activeElement.closest &&
+      document.activeElement.closest("#risk-ips tr[data-ip]") ? document.activeElement.getAttribute("data-ip") : null;
+    const head = el("tr", null, ["IP", "Балл", "Уровень", "Причины"].map(t => el("th", { text: t })),
+      ["Номеров", "SMS", "Попыток"].map(t => el("th", { class: "num", text: t })),
+      el("th", { text: "Активность" }), el("th", { text: "В бою" }));
+    const body = rows.map(r => {
+      const score = el("div", { class: "bar-cell" },
+        el("div", { class: "bar", style: { width: Math.max(2, r.score) + "px", background: lvl(r.level).color } }),
+        el("span", { text: r.score }),
+        r.current_score < r.score ? el("span", { class: "risk-now", text: `сейчас ${r.current_score}` }) : null);
+      return el("tr", { class: "risk-row", tabindex: 0, "data-ip": r.ip,
+          "aria-selected": state.selected === r.ip ? "true" : "false" },
+        el("td", { class: "mono", text: r.ip }), el("td", null, score), el("td", null, levelBadge(r.level)),
+        el("td", null, reasonChips(r.reasons)),
+        el("td", { class: "num", text: num(r.numbers) }), el("td", { class: "num", text: num(r.sms_sent) }),
+        el("td", { class: "num", text: num(r.verify_attempts) }),
+        el("td", null, sparkline(r.sparkline || [])), el("td", { text: r.would_action_text }));
+    });
+    box.replaceChildren(el("table", null, el("thead", null, head), el("tbody", null, body)));
+    if (focusedIp) {
+      const again = [...box.querySelectorAll("tr[data-ip]")].find(tr => tr.getAttribute("data-ip") === focusedIp);
+      if (again) again.focus();
+    }
+  }
+
+  $("risk-ips").addEventListener("click", e => {
+    const tr = e.target.closest("tr[data-ip]");
+    if (tr) openDetail(tr.getAttribute("data-ip"));
+  });
+  $("risk-ips").addEventListener("keydown", e => {
+    const tr = e.target.closest("tr[data-ip]");
+    if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openDetail(tr.getAttribute("data-ip")); }
+  });
+  $("risk-filter").addEventListener("click", e => {
+    const b = e.target.closest("button[data-level]");
+    if (!b) return;
+    state.minLevel = b.getAttribute("data-level");
+    $("risk-filter").querySelectorAll("button").forEach(x =>
+      x.setAttribute("aria-pressed", String(x.getAttribute("data-level") === state.minLevel)));
+    guard("ips", fetchIps, d => { state.ips = d; renderIps(); }, FAST_MS);
+  });
+  const fetchIps = () => api("/api/risk/ips", { limit: 20, min_level: state.minLevel });
+
+  // ---------- 6. Карточка IP ----------
+  function openDetail(ip) {
+    state.selected = ip;
+    state.detail = null;
+    state.detailMissing = false;
+    const card = $("risk-detail");
+    card.hidden = false;
+    card.replaceChildren(el("h2", { text: `IP ${ip}` }), el("div", { class: "empty", text: "Загрузка…" }));
+    renderIps();
+    guard("detail", fetchDetail, d => { state.detail = d; renderDetail(); }, FAST_MS)
+      .then(() => card.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+  }
+  function closeDetail() {
+    const ip = state.selected;
+    state.selected = null; state.detail = null;
+    $("risk-detail").hidden = true;
+    $("risk-detail").replaceChildren();
+    renderIps();
+    const row = [...$("risk-ips").querySelectorAll("tr[data-ip]")].find(tr => tr.getAttribute("data-ip") === ip);
+    if (row) row.focus();
+  }
+  const fetchDetail = () => api("/api/risk/ip", { ip: state.selected });
+
+  function breakdown(d) {
+    const reasons = d.reasons || [];
+    const sum = reasons.reduce((a, r) => a + r.points, 0);
+    const cap = 100, domain = Math.max(cap, sum);
+    const pct = v => (v / domain * 100) + "%";
+    const bar = el("div", { class: "risk-breakdown", role: "img",
+      "aria-label": `разбор балла: ${reasons.map(r => `${SIGNALS[r.name] || r.name} +${r.points}`).join(", ") || "причин нет"}` });
+    let acc = 0;
+    reasons.forEach((r, i) => {
+      const color = SEG_COLORS[i % SEG_COLORS.length], label = `${SIGNALS[r.name] || r.name} +${r.points}`;
+      const inside = Math.max(0, Math.min(r.points, cap - acc)), over = r.points - inside;
+      if (inside > 0) bar.append(el("div", { class: "risk-seg", title: `${label}: ${r.detail}`,
+        style: { left: pct(acc), width: pct(inside), background: color }, text: label }));
+      if (over > 0) bar.append(el("div", { class: "risk-seg risk-over", title: `${label}: сверх максимума 100`,
+        style: { left: pct(acc + inside), width: pct(over), background: color }, text: inside > 0 ? "" : label }));
+      acc += r.points;
+    });
+    const marks = [[30, "30 · medium"], [60, "60 · high"]];
+    if (domain > cap) marks.push([cap, "100 · максимум"]);
+    const scale = el("div", { class: "risk-scale" }, bar,
+      marks.map(([v, t]) => el("div", { class: "risk-mark", style: { left: pct(v) } }, el("span", { text: t }))));
+    const summary = el("div", { class: "details", text: sum === d.score
+      ? `Сумма причин: ${sum} = балл ${d.score}`
+      : `Сумма причин: ${sum}, балл ограничен максимумом: ${d.score}` });
+    const list = reasons.length
+      ? el("ul", { class: "risk-reasons" }, reasons.map((r, i) => el("li", null,
+          el("i", { style: { background: SEG_COLORS[i % SEG_COLORS.length] } }),
+          el("b", { text: `${SIGNALS[r.name] || r.name} +${r.points}` }),
+          el("span", { text: r.detail }))))
+      : empty("Причин нет — балл 0");
+    return [scale, summary, list];
+  }
+
+  function renderDetail() {
+    const card = $("risk-detail");
+    if (!state.selected) { card.hidden = true; return; }
+    const close = el("button", { type: "button", text: "Закрыть ✕", onclick: closeDetail,
+      "aria-label": "Закрыть карточку IP (Escape)" });
+    if (state.detailMissing) {
+      card.replaceChildren(el("h2", null, `IP ${state.selected}`, el("span", { class: "spacer" }), close),
+        empty("IP больше не отслеживается (нет активности больше часа)"));
+      return;
+    }
+    const d = state.detail;
+    if (!d) return;
+    const head = el("h2", null, el("span", { class: "mono risk-ip", text: d.ip }), levelBadge(d.level),
+      el("span", { text: `балл ${d.score}` }),
+      d.current_score < d.score ? el("span", { class: "risk-now", text: `сейчас ${d.current_score}` }) : null,
+      el("span", { class: "spacer" }), close);
+    const meta = el("div", { class: "risk-detail-head details" },
+      el("span", null, "В бою: ", el("strong", { text: d.would_action_text })),
+      el("span", { text: `впервые: ${dt(d.first_seen)}` }),
+      el("span", { text: `последний раз: ${dt(d.last_seen)}` }));
+    const st = d.stats || {};
+    const stat = (label, value) => el("div", { class: "risk-stat" }, el("b", { text: value }), el("span", { text: label }));
+    const stats = el("div", { class: "risk-stats" },
+      stat("номеров", num(st.numbers)), stat("SMS отправлено", num(st.sms_sent)),
+      stat("SMS отклонено", num(st.sms_rejected)), stat("подтверждено", num(st.verify_ok)),
+      stat("неверных кодов", num(st.verify_fail)), stat("истекло", num(st.verify_expired)),
+      stat("к заблокированному", num(st.verify_locked)), stat("лимит по IP", num(st.ip_limited)),
+      stat("стоимость SMS", `${num(d.sms_cost)} ${d.currency}`));
+    const allEvents = d.events || [], events = allEvents.slice(0, DETAIL_EVENTS);
+    const table = events.length ? el("div", { class: "scroll" }, el("table", null,
+      el("thead", null, el("tr", null, ["Время", "Событие", "Номер", "Статус", "Причина"].map(t => el("th", { text: t })))),
+      el("tbody", null, events.map(ev => el("tr", null,
+        el("td", { text: hms(ev.ts) }),
+        el("td", null, EVENTS[ev.event] || ev.event,
+          ev.new_ip ? el("span", { class: "risk-tag", text: "новый IP" }) : null,
+          ev.scope ? el("span", { class: "risk-tag", text: ev.scope }) : null),
+        el("td", { class: "mono", text: ev.msisdn || "—" }),
+        el("td", { class: "num", text: ev.status == null ? "—" : ev.status }),
+        el("td", { class: "details", text: ev.reason || "—" }))))),
+      allEvents.length > events.length
+        ? el("div", { class: "details", text: `показаны ${events.length} последних из ${allEvents.length}` }) : null)
+      : empty("Событий за 10 минут нет");
+    card.replaceChildren(head, meta, el("h2", { text: "Почему такой балл" }), ...breakdown(d),
+      stats, el("h2", { text: "Последние события IP (10 минут)" }), table,
+      el("div", { class: "details err risk-status", id: "risk-st-detail" }));
+  }
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && state.selected && state.tab === "risk") closeDetail();
+  });
+
+  // ---------- 7. Лента тревог и счётчик на кнопке ----------
+  function mergeAlerts(list) {
+    const fresh = (list || []).filter(a => a.id > state.lastAlertId);
+    if (!fresh.length) return 0;
+    state.lastAlertId = Math.max(state.lastAlertId, ...fresh.map(a => a.id));
+    if (state.alertsLoaded) for (const a of fresh) state.fresh.set(a.id, Date.now());
+    state.alerts = fresh.concat(state.alerts).slice(0, MAX_ALERTS);
+    return fresh.length;
+  }
+  async function fetchAlerts(countOnly) {
+    const list = await api("/api/risk/alerts", { limit: MAX_ALERTS, since_id: state.lastAlertId });
+    const wasLoaded = state.alertsLoaded;
+    const added = mergeAlerts(list);
+    state.alertsLoaded = true;
+    if (wasLoaded && added && state.tab !== "risk") { state.unseen += added; renderCount(); }
+    if (countOnly) { if (added) state.alertsDirty = true; return; }
+    if (added || state.alertsDirty || $("risk-alerts").dataset.rendered !== "1") renderAlerts();
+  }
+  function renderAlerts() {
+    const box = $("risk-alerts");
+    box.dataset.rendered = "1";
+    state.alertsDirty = false;
+    const now = Date.now();
+    for (const [id, at] of state.fresh) if (now - at > FLASH_MS) state.fresh.delete(id);
+    if (!state.alerts.length) { box.replaceChildren(empty("Тревог пока нет")); return; }
+    box.replaceChildren(...state.alerts.map(a => el("div", {
+        class: `risk-alert ${lvl(a.severity).badge}${state.fresh.has(a.id) ? " risk-new" : ""}` },
+      el("div", { class: "risk-alert-head" },
+        levelBadge(a.severity), el("span", { text: hms(a.ts) }),
+        el("button", { type: "button", class: "risk-link mono", text: a.ip, onclick: () => openDetail(a.ip),
+          title: "Открыть карточку IP" }),
+        el("span", { text: `балл ${a.score}` }), el("span", { class: "details", text: `#${a.id}` })),
+      el("div", { text: a.message }))));
+  }
+  function renderCount() {
+    const badge = $("risk-count");
+    badge.textContent = state.unseen > 99 ? "99+" : String(state.unseen);
+    badge.hidden = state.unseen === 0;
+    $("tabbtn-risk").setAttribute("aria-label", state.unseen ? `Риски, новых тревог: ${state.unseen}` : "Риски");
+  }
+
+  // ---------- 8. Подвал ----------
+  function renderMeta() {
+    const m = state.meta;
+    if (!m) return;
+    $("risk-mode").hidden = m.observe_only !== true;
+    const items = [
+      `принято событий: ${num(m.ingested)}`, `отброшено: ${num(m.dropped)}`, `ошибок: ${num(m.errors)}`,
+      `режим: ${m.mode}`, `очередь: ${num(m.queue_size)}`, `окно признаков: ${Math.round(m.window / 60)} мин`,
+    ].map(text => el("span", { text }));
+    if ((m.dropped || 0) > 0 || (m.errors || 0) > 0)
+      items.unshift(el("span", { class: "badge s-warning", text: "есть потери или ошибки модуля" }));
+    $("risk-footer").replaceChildren(...items);
+  }
+
+  // ---------- опрос ----------
+  const isLive = () => $("live").getAttribute("aria-pressed") !== "false";
+  const canPoll = () => isLive() && !document.hidden;
+
+  async function pollFast() {
+    if (state.busyFast || state.tab !== "risk" || !canPoll()) return;
+    state.busyFast = true;
+    try {
+      await Promise.all([
+        guard("overview", () => api("/api/risk/overview", { window: 3600 }),
+          d => { state.overview = d; state.now = d.now; renderTiles(); }, FAST_MS),
+        guard("ips", fetchIps, d => { state.ips = d; renderIps(); }, FAST_MS),
+        guard("alerts", () => fetchAlerts(false), () => {}, FAST_MS),
+        state.selected ? guard("detail", fetchDetail, d => {
+          state.detail = d; state.detailMissing = false; renderDetail(); }, FAST_MS) : null,
+      ]);
+    } finally { state.busyFast = false; }
+  }
+
+  async function pollSlow() {
+    if (!canPoll()) return;
+    if (state.tab !== "risk") {
+      // вкладка скрыта: только счётчик новых тревог на кнопке
+      if (state.busyCount) return;
+      state.busyCount = true;
+      try { await fetchAlerts(true); } catch (e) { /* тихо: счётчик не критичен */ }
+      finally { state.busyCount = false; }
+      return;
+    }
+    if (state.busySlow) return;
+    state.busySlow = true;
+    try {
+      await Promise.all([
+        guard("timeline", () => api("/api/risk/timeline", { window: 3600, step: 60 }),
+          d => { state.timeline = d; renderTimeline(); }, SLOW_MS),
+        guard("scatter", () => api("/api/risk/scatter", { window: 1800 }),
+          d => { state.scatter = d; renderScatter(); }, SLOW_MS),
+        guard("meta", () => api("/api/risk/meta"),
+          d => { state.meta = d; if (!state.now) state.now = d.now; renderMeta(); }, SLOW_MS),
+      ]);
+    } finally { state.busySlow = false; }
+  }
+
+  // ---------- вкладки ----------
+  const TABS = ["security", "risk"];
+  function setTab(tab, opts) {
+    const { focus = false, updateHash = true } = opts || {};
+    state.tab = tab;
+    for (const name of TABS) {
+      const on = name === tab, btn = $("tabbtn-" + name);
+      btn.setAttribute("aria-selected", String(on));
+      btn.setAttribute("aria-pressed", String(on));
+      btn.tabIndex = on ? 0 : -1;
+      $("tab-" + name).hidden = !on;
+      if (on && focus) btn.focus();
+    }
+    $("meta").hidden = tab !== "security";
+    if (updateHash) history.replaceState(null, "", tab === "risk" ? "#risk" : location.pathname + location.search);
+    try { localStorage.setItem(TAB_KEY, tab); } catch (e) { /* хранилище недоступно — не важно */ }
+    if (tab === "risk") {
+      state.unseen = 0;
+      renderCount();
+      requestAnimationFrame(() => { renderTimeline(); renderScatter(); });
+      pollFast(); pollSlow();
+    }
+    window.dispatchEvent(new CustomEvent("otp-dashboard-tab", { detail: tab }));
+  }
+
+  document.querySelector(".risk-tabs").addEventListener("click", e => {
+    const btn = e.target.closest("[role=tab]");
+    if (btn) setTab(btn.id.replace("tabbtn-", ""));
+  });
+  document.querySelector(".risk-tabs").addEventListener("keydown", e => {
+    const i = TABS.indexOf(state.tab);
+    const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    setTab(TABS[(next + TABS.length) % TABS.length], { focus: true });
+  });
+  window.addEventListener("hashchange", () => {
+    const tab = location.hash === "#risk" ? "risk" : "security";
+    if (tab !== state.tab) setTab(tab, { updateHash: false });
+  });
+  $("live").addEventListener("click", () => { if (isLive()) { pollFast(); pollSlow(); } });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { pollFast(); pollSlow(); } });
+
+  // перерисовка графиков при изменении размера
+  let resizeTimer = null;
+  const onResize = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (state.tab === "risk") { renderTimeline(); renderScatter(); } }, 150);
+  };
+  if ("ResizeObserver" in window) {
+    const ro = new ResizeObserver(onResize);
+    ro.observe($("risk-timeline-box")); ro.observe($("risk-scatter-box"));
+  } else {
+    window.addEventListener("resize", onResize);
+  }
+
+  // ---------- старт ----------
+  renderLegends();
+  let initial = location.hash === "#risk" ? "risk" : null;
+  if (!initial && !location.hash) {
+    try { if (localStorage.getItem(TAB_KEY) === "risk") initial = "risk"; } catch (e) { /* нет хранилища */ }
+  }
+  if (initial === "risk") setTab("risk");
+  else fetchAlerts(true).catch(() => {});  // точка отсчёта для счётчика тревог
+  setInterval(pollFast, FAST_MS);
+  setInterval(pollSlow, SLOW_MS);
 })();
 </script>
 </body>

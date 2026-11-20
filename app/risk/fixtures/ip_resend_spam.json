@@ -6,6 +6,7 @@
   "would_action": "allow",
   "would_action_text": "обычный режим",
   "reasons": [],
+  "current_score": 0,
   "first_seen": 1795162624.497,
   "last_seen": 1795162651.268,
   "stats": {
@@ -39,6 +40,7 @@
       "msisdn": "+996222***051",
       "status": 429,
       "reason": "cooldown",
+      "scope": null,
       "new_ip": false
     },
     {
@@ -47,6 +49,7 @@
       "msisdn": "+996222***051",
       "status": 429,
       "reason": "cooldown",
+      "scope": null,
       "new_ip": false
     },
     {
@@ -55,6 +58,7 @@
       "msisdn": "+996222***051",
       "status": 429,
       "reason": "cooldown",
+      "scope": null,
       "new_ip": false
     },
     {
@@ -63,6 +67,7 @@
       "msisdn": "+996222***051",
       "status": 429,
       "reason": "cooldown",
+      "scope": null,
       "new_ip": false
     },
     {
@@ -71,6 +76,7 @@
       "msisdn": "+996222***051",
       "status": 429,
       "reason": "cooldown",
+      "scope": null,
       "new_ip": false
     },
     {
@@ -79,6 +85,7 @@
       "msisdn": "+996222***051",
       "status": 429,
       "reason": "cooldown",
+      "scope": null,
       "new_ip": false
     },
     {
@@ -87,6 +94,7 @@
       "msisdn": "+996222***051",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     }
   ]

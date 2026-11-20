@@ -36,6 +36,7 @@
     "sms_sent": 50,
     "verify_attempts": 20,
     "last_seen": 1795163212.32,
+    "current_score": 100,
     "sparkline": [
       0,
       0,
@@ -76,6 +77,7 @@
     "sms_sent": 40,
     "verify_attempts": 0,
     "last_seen": 1795163118.412,
+    "current_score": 90,
     "sparkline": [
       0,
       0,
@@ -111,6 +113,7 @@
     "sms_sent": 1,
     "verify_attempts": 20,
     "last_seen": 1795162699.22,
+    "current_score": 40,
     "sparkline": [
       0,
       0,
@@ -141,6 +144,7 @@
     "sms_sent": 8,
     "verify_attempts": 10,
     "last_seen": 1795162617.981,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -171,6 +175,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795163280.57,
+    "current_score": 15,
     "sparkline": [
       0,
       0,
@@ -195,6 +200,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162999.583,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -219,6 +225,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162984.031,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -243,6 +250,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162953.625,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -267,6 +275,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162927.615,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -291,6 +300,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162912.495,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -315,6 +325,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162883.485,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -339,6 +350,7 @@
     "sms_sent": 1,
     "verify_attempts": 2,
     "last_seen": 1795162855.628,
+    "current_score": 0,
     "sparkline": [
       0,
       3,
@@ -363,6 +375,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162812.721,
+    "current_score": 0,
     "sparkline": [
       1,
       1,
@@ -387,6 +400,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162776.589,
+    "current_score": 0,
     "sparkline": [
       2,
       0,
@@ -411,6 +425,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162746.807,
+    "current_score": 0,
     "sparkline": [
       1,
       0,
@@ -435,6 +450,7 @@
     "sms_sent": 1,
     "verify_attempts": 0,
     "last_seen": 1795162651.268,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -459,6 +475,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162369.385,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -483,6 +500,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162341.006,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -507,6 +525,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162318.903,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -531,6 +550,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162281.637,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -555,6 +575,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162247.183,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -579,6 +600,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162207.123,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -603,6 +625,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162176.604,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -627,6 +650,7 @@
     "sms_sent": 1,
     "verify_attempts": 2,
     "last_seen": 1795162136.112,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -651,6 +675,7 @@
     "sms_sent": 1,
     "verify_attempts": 2,
     "last_seen": 1795162106.891,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -675,6 +700,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162073.333,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -699,6 +725,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162043.682,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -723,6 +750,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795162025.207,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -747,6 +775,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795161997.422,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -771,6 +800,7 @@
     "sms_sent": 1,
     "verify_attempts": 2,
     "last_seen": 1795161952.645,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -795,6 +825,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795161909.293,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -819,6 +850,7 @@
     "sms_sent": 1,
     "verify_attempts": 2,
     "last_seen": 1795161886.089,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -843,6 +875,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795161850.189,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -867,6 +900,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795161819.937,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -891,6 +925,7 @@
     "sms_sent": 1,
     "verify_attempts": 2,
     "last_seen": 1795161779.673,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -915,6 +950,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795161745.306,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -939,6 +975,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795161715.066,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -963,6 +1000,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795161681.246,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -987,6 +1025,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795161652.37,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -1011,6 +1050,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795161631.911,
+    "current_score": 0,
     "sparkline": [
       0,
       0,
@@ -1035,6 +1075,7 @@
     "sms_sent": 1,
     "verify_attempts": 1,
     "last_seen": 1795161616.045,
+    "current_score": 0,
     "sparkline": [
       0,
       0,

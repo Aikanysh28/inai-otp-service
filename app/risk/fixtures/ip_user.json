@@ -6,6 +6,7 @@
   "would_action": "allow",
   "would_action_text": "обычный режим",
   "reasons": [],
+  "current_score": 0,
   "first_seen": 1795161600.0,
   "last_seen": 1795161616.045,
   "stats": {
@@ -39,6 +40,7 @@
       "msisdn": "+996501***240",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -47,6 +49,7 @@
       "msisdn": "+996501***240",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     }
   ]

@@ -17,6 +17,7 @@
       "detail": "попыток к заблокированному номеру: 15"
     }
   ],
+  "current_score": 40,
   "first_seen": 1795162687.811,
   "last_seen": 1795162699.22,
   "stats": {
@@ -50,6 +51,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -58,6 +60,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -66,6 +69,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -74,6 +78,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -82,6 +87,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -90,6 +96,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -98,6 +105,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -106,6 +114,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -114,6 +123,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -122,6 +132,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -130,6 +141,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -138,6 +150,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -146,6 +159,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -154,6 +168,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -162,6 +177,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -170,6 +186,7 @@
       "msisdn": "+996500***815",
       "status": 423,
       "reason": "too_many_failed_attempts",
+      "scope": null,
       "new_ip": false
     },
     {
@@ -178,6 +195,7 @@
       "msisdn": "+996500***815",
       "status": 401,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -186,6 +204,7 @@
       "msisdn": "+996500***815",
       "status": 401,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -194,6 +213,7 @@
       "msisdn": "+996500***815",
       "status": 401,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -202,6 +222,7 @@
       "msisdn": "+996500***815",
       "status": 401,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -210,6 +231,7 @@
       "msisdn": "+996500***815",
       "status": 401,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -218,6 +240,7 @@
       "msisdn": "+996500***815",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     }
   ]

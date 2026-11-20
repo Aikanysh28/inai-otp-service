@@ -32,6 +32,7 @@
       "detail": "лимит проверок по IP срабатывал: 80"
     }
   ],
+  "current_score": 100,
   "first_seen": 1795163163.643,
   "last_seen": 1795163212.32,
   "stats": {
@@ -65,6 +66,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -73,6 +75,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -81,6 +84,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -89,6 +93,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -97,6 +102,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -105,6 +111,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -113,6 +120,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -121,6 +129,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -129,6 +138,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -137,6 +147,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -145,6 +156,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -153,6 +165,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -161,6 +174,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -169,6 +183,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -177,6 +192,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -185,6 +201,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -193,6 +210,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -201,6 +219,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -209,6 +228,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -217,6 +237,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -225,6 +246,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -233,6 +255,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -241,6 +264,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -249,6 +273,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -257,6 +282,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -265,6 +291,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -273,6 +300,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -281,6 +309,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -289,6 +318,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -297,6 +327,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -305,6 +336,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -313,6 +345,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -321,6 +354,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -329,6 +363,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -337,6 +372,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -345,6 +381,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -353,6 +390,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -361,6 +399,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -369,6 +408,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -377,6 +417,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -385,6 +426,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -393,6 +435,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -401,6 +444,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -409,6 +453,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -417,6 +462,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -425,6 +471,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -433,6 +480,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -441,6 +489,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -449,6 +498,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -457,6 +507,7 @@
       "msisdn": null,
       "status": 429,
       "reason": null,
+      "scope": null,
       "new_ip": false
     }
   ]

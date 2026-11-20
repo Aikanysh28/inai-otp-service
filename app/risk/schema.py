@@ -66,10 +66,16 @@ class RiskEvent:
     status: Optional[int]
     reason: Optional[str]
     user_agent: Optional[str] = None
+    scope: Optional[str] = None  # например "cabinet" — код для входа в кабинет абонента
 
 
 def digits_only(msisdn: str) -> str:
     return _NON_DIGITS.sub("", msisdn)
+
+
+def derive_id_key(secret_key: bytes) -> bytes:
+    """Ключ псевдонимов номеров из ключа сервиса: HMAC-SHA256(secret_key, b"risk-id")."""
+    return hmac.new(secret_key, b"risk-id", hashlib.sha256).digest()
 
 
 def make_msisdn_id(msisdn: str, id_key: bytes) -> str:
@@ -156,6 +162,7 @@ def normalize(record: Any, *, id_key: bytes, msisdn: Optional[str] = None,
         reason = DEFAULT_REASON.get(raw_event)
 
     user_agent = record.get("user_agent")
+    scope = record.get("scope")
     ip = record.get("ip")
     return RiskEvent(
         ts=moment,
@@ -168,4 +175,5 @@ def normalize(record: Any, *, id_key: bytes, msisdn: Optional[str] = None,
         status=_status(record, default_status),
         reason=reason,
         user_agent=user_agent if isinstance(user_agent, str) else None,
+        scope=scope if isinstance(scope, str) and scope else None,
     )

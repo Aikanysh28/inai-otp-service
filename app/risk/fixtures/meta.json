@@ -1,6 +1,8 @@
 {
   "now": 1795163280.57,
-  "mode": "observe",
+  "mode": "sync",
+  "observe_only": true,
+  "queue_size": 0,
   "window": 600,
   "tz_offset_hours": 6,
   "levels": {
@@ -87,5 +89,6 @@
   "ignored": 0,
   "errors": 0,
   "ips_tracked": 41,
-  "alerts_total": 5
+  "alerts_total": 5,
+  "dropped": 0
 }

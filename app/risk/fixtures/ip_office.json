@@ -12,6 +12,7 @@
       "detail": "коды запрошены на 8 номеров за 10 мин"
     }
   ],
+  "current_score": 0,
   "first_seen": 1795162377.335,
   "last_seen": 1795162617.981,
   "stats": {
@@ -45,6 +46,7 @@
       "msisdn": "+996770***656",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -53,6 +55,7 @@
       "msisdn": "+996770***656",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -61,6 +64,7 @@
       "msisdn": "+996991***228",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -69,6 +73,7 @@
       "msisdn": "+996991***228",
       "status": 401,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -77,6 +82,7 @@
       "msisdn": "+996991***228",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -85,6 +91,7 @@
       "msisdn": "+996225***862",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -93,6 +100,7 @@
       "msisdn": "+996225***862",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -101,6 +109,7 @@
       "msisdn": "+996779***185",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -109,6 +118,7 @@
       "msisdn": "+996779***185",
       "status": 401,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -117,6 +127,7 @@
       "msisdn": "+996779***185",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -125,6 +136,7 @@
       "msisdn": "+996221***708",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -133,6 +145,7 @@
       "msisdn": "+996221***708",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -141,6 +154,7 @@
       "msisdn": "+996551***421",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -149,6 +163,7 @@
       "msisdn": "+996551***421",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -157,6 +172,7 @@
       "msisdn": "+996993***024",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -165,6 +181,7 @@
       "msisdn": "+996993***024",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -173,6 +190,7 @@
       "msisdn": "+996551***346",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -181,6 +199,7 @@
       "msisdn": "+996551***346",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     }
   ]

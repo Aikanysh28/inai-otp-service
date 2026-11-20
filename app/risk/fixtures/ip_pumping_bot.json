@@ -22,6 +22,7 @@
       "detail": "40 SMS отправлено, подтверждено 0"
     }
   ],
+  "current_score": 90,
   "first_seen": 1795163017.524,
   "last_seen": 1795163118.412,
   "stats": {
@@ -55,6 +56,7 @@
       "msisdn": "+996700***239",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -63,6 +65,7 @@
       "msisdn": "+996700***238",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -71,6 +74,7 @@
       "msisdn": "+996700***237",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -79,6 +83,7 @@
       "msisdn": "+996700***236",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -87,6 +92,7 @@
       "msisdn": "+996700***235",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -95,6 +101,7 @@
       "msisdn": "+996700***234",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -103,6 +110,7 @@
       "msisdn": "+996700***233",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -111,6 +119,7 @@
       "msisdn": "+996700***232",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -119,6 +128,7 @@
       "msisdn": "+996700***231",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -127,6 +137,7 @@
       "msisdn": "+996700***230",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -135,6 +146,7 @@
       "msisdn": "+996700***229",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -143,6 +155,7 @@
       "msisdn": "+996700***228",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -151,6 +164,7 @@
       "msisdn": "+996700***227",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -159,6 +173,7 @@
       "msisdn": "+996700***226",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -167,6 +182,7 @@
       "msisdn": "+996700***225",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -175,6 +191,7 @@
       "msisdn": "+996700***224",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -183,6 +200,7 @@
       "msisdn": "+996700***223",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -191,6 +209,7 @@
       "msisdn": "+996700***222",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -199,6 +218,7 @@
       "msisdn": "+996700***221",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -207,6 +227,7 @@
       "msisdn": "+996700***220",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -215,6 +236,7 @@
       "msisdn": "+996700***219",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -223,6 +245,7 @@
       "msisdn": "+996700***218",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -231,6 +254,7 @@
       "msisdn": "+996700***217",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -239,6 +263,7 @@
       "msisdn": "+996700***216",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -247,6 +272,7 @@
       "msisdn": "+996700***215",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -255,6 +281,7 @@
       "msisdn": "+996700***214",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -263,6 +290,7 @@
       "msisdn": "+996700***213",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -271,6 +299,7 @@
       "msisdn": "+996700***212",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -279,6 +308,7 @@
       "msisdn": "+996700***211",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -287,6 +317,7 @@
       "msisdn": "+996700***210",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -295,6 +326,7 @@
       "msisdn": "+996700***209",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -303,6 +335,7 @@
       "msisdn": "+996700***208",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -311,6 +344,7 @@
       "msisdn": "+996700***207",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -319,6 +353,7 @@
       "msisdn": "+996700***206",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -327,6 +362,7 @@
       "msisdn": "+996700***205",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -335,6 +371,7 @@
       "msisdn": "+996700***204",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -343,6 +380,7 @@
       "msisdn": "+996700***203",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -351,6 +389,7 @@
       "msisdn": "+996700***202",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -359,6 +398,7 @@
       "msisdn": "+996700***201",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     },
     {
@@ -367,6 +407,7 @@
       "msisdn": "+996700***200",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": false
     }
   ]

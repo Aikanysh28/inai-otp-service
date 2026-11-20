@@ -7,12 +7,16 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import os
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import AbstractSet, Optional
 
 from .api import OTPApi, Request, Response
 from .config import Settings
 from .otp_service import OTPService
+from .risk import RiskEngine, RiskSettings
+from .risk.schema import derive_id_key
 from .security_log import SecurityLog
 from .store import MemoryStore, RedisStore, Store
 
@@ -90,13 +94,29 @@ def build_store(settings: Settings) -> Store:
     return store
 
 
+def build_risk(settings: Settings, service: OTPService) -> Optional[RiskEngine]:
+    """Модуль рисков (только наблюдает). RISK_ENABLED=0 — выключен; при сбое — сервис без него."""
+    if os.getenv("RISK_ENABLED", "1").strip() == "0":
+        return None
+    try:
+        secret = os.getenv("RISK_ID_SECRET")
+        id_key = secret.encode() if secret else derive_id_key(settings.secret_key)
+        engine = RiskEngine(RiskSettings.from_env(), clock=service.clock, id_key=id_key)
+        service.log.add_sink(engine.start_worker())
+        return engine
+    except Exception as error:  # noqa: BLE001 — без модуля рисков сервис работает как раньше
+        print(f"[risk] модуль рисков не запущен: {error!r}", file=sys.stderr, flush=True)
+        return None
+
+
 def create_server(settings: Optional[Settings] = None, service: Optional[OTPService] = None,
                   host: Optional[str] = None, port: Optional[int] = None) -> ThreadingHTTPServer:
     settings = settings or Settings()
     if service is None:
         service = OTPService(settings, SecurityLog(settings.log_dir), store=build_store(settings))
     address = (settings.host if host is None else host, settings.port if port is None else port)
-    handler = make_handler(OTPApi(service, settings.dashboard_token), settings.trusted_proxies)
+    api = OTPApi(service, settings.dashboard_token, risk=build_risk(settings, service))
+    handler = make_handler(api, settings.trusted_proxies)
     server = ThreadingHTTPServer(address, handler)
     server.daemon_threads = True
     return server

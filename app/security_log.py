@@ -96,6 +96,14 @@ class SecurityLog:
         self._history: deque[tuple[float, dict]] = deque(maxlen=self.HISTORY_SIZE)
         self._counters: Counter[str] = Counter()
         self._mutex = threading.Lock()
+        self._sinks: list[Callable[..., None]] = []
+
+    def add_sink(self, fn: Callable[..., None]) -> None:
+        """Подписчик на события: fn(record, msisdn=<номер без маски или None>, ts=<clock()>).
+
+        Вызывается после записи события; исключения подписчика на журнал не влияют.
+        """
+        self._sinks.append(fn)
 
     def event(self, event: SecurityEvent, msisdn: Optional[str] = None,
               ip: Optional[str] = None, **details) -> None:
@@ -112,6 +120,11 @@ class SecurityLog:
         with self._mutex:
             self._history.append((self._clock(), record))
             self._counters[event.value] += 1
+        for sink in self._sinks:
+            try:
+                sink(dict(record), msisdn=msisdn, ts=self._clock())
+            except Exception:  # noqa: BLE001 — подписчик не должен влиять на журнал и ответ
+                pass
 
     def snapshot(self, limit: int = 100, minutes: int = 30) -> dict:
         """Данные для дашборда: счётчики, поминутная лента, топ IP, последние события."""

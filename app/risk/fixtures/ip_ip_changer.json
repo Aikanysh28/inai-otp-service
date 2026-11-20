@@ -12,6 +12,7 @@
       "detail": "новый IP для ранее подтверждённых номеров: 1"
     }
   ],
+  "current_score": 15,
   "first_seen": 1795163252.189,
   "last_seen": 1795163280.57,
   "stats": {
@@ -45,6 +46,7 @@
       "msisdn": "+996501***240",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": true
     },
     {
@@ -53,6 +55,7 @@
       "msisdn": "+996501***240",
       "status": 200,
       "reason": null,
+      "scope": null,
       "new_ip": true
     }
   ]

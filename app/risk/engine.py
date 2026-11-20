@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 import os
+import queue
 import secrets
 import threading
 import time
@@ -29,6 +30,7 @@ TIMELINE_KINDS = ("send_ok", "send_rejected", "verify_ok", "verify_fail", "verif
 # Сколько хранить неактивный IP: дольше окна признаков, чтобы топ IP и разбор жили час
 IP_RETENTION = 3600
 SPARKLINE_MINUTES = 10
+_STOP = object()  # сигнал остановки обработчика очереди
 
 
 @dataclass(frozen=True)
@@ -94,6 +96,11 @@ class RiskEngine:
         self.ingested = 0
         self.ignored = 0
         self.errors = 0
+        # Асинхронная доставка: очередь и поток-обработчик (start_worker)
+        self._queue: Optional[queue.Queue] = None
+        self._worker: Optional[threading.Thread] = None
+        self._dropped_lock = threading.Lock()  # только для счётчика, держится на одно сложение
+        self.dropped = 0
 
     # ---------- приём событий ----------
 
@@ -109,6 +116,77 @@ class RiskEngine:
         except Exception:  # noqa: BLE001 — ошибка модуля рисков не должна ронять OTP
             with self._lock:
                 self.errors += 1
+
+    # ---------- асинхронная доставка ----------
+
+    def start_worker(self, maxsize: int = 10000) -> Callable[..., None]:
+        """Запустить поток-обработчик; вернуть асинхронный синк (record, msisdn=None, ts=None).
+
+        Асинхронный синк только кладёт событие в очередь без ожидания: если очередь полна,
+        событие отбрасывается и растёт self.dropped. Так модуль рисков не задерживает запрос.
+        """
+        if self._worker is not None and self._worker.is_alive():
+            return self.async_sink
+        self._queue = queue.Queue(maxsize=maxsize)
+        self._worker = threading.Thread(target=self._run_worker, args=(self._queue,),
+                                        name="risk-worker", daemon=True)
+        self._worker.start()
+        return self.async_sink
+
+    def async_sink(self, record: Any, msisdn: Optional[str] = None,
+                   ts: Optional[float] = None) -> None:
+        try:
+            pending = self._queue
+            if pending is None:
+                raise queue.Full
+            pending.put_nowait((dict(record), msisdn, ts))
+        except Exception:  # noqa: BLE001 — полная очередь, мусор вместо записи и т.п.
+            with self._dropped_lock:
+                self.dropped += 1
+
+    def _run_worker(self, pending: queue.Queue) -> None:
+        while True:
+            item = pending.get()
+            try:
+                if item is _STOP:
+                    return
+                record, msisdn, ts = item
+                self.sink(record, msisdn=msisdn, ts=ts)
+            finally:
+                pending.task_done()
+
+    def drain(self, timeout: float = 2.0) -> bool:
+        """Дождаться, пока очередь опустеет. True — все события обработаны."""
+        pending = self._queue
+        if pending is None:
+            return True
+        deadline = time.monotonic() + timeout
+        with pending.all_tasks_done:
+            while pending.unfinished_tasks:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                pending.all_tasks_done.wait(remaining)
+        return True
+
+    def stop_worker(self, timeout: float = 2.0) -> None:
+        """Остановить обработчик: уже поставленные события обрабатываются, затем поток выходит."""
+        worker, pending = self._worker, self._queue
+        if worker is None or pending is None:
+            return
+        try:
+            pending.put(_STOP, timeout=timeout)
+        except queue.Full:
+            pass
+        worker.join(timeout)
+        self._worker = None
+
+    @property
+    def mode(self) -> str:
+        worker = self._worker
+        return "async" if worker is not None and worker.is_alive() else "sync"
+
+    # ---------- обработка ----------
 
     def ingest(self, ev: RiskEvent) -> Assessment:
         s = self.settings
@@ -302,6 +380,7 @@ class RiskEngine:
             "sms_sent": a.stats.sends_ok,
             "verify_attempts": a.stats.verify_attempts,
             "last_seen": _round_ts(state.last_seen),
+            "current_score": self._assess_events(state.last.ip, state.events, now).score,
             "sparkline": self._sparkline(state, now),
         })
         return row
@@ -328,6 +407,7 @@ class RiskEngine:
             events = list(state.events)[-max(0, events_limit):] if events_limit > 0 else []
             detail = a.to_dict()
             detail.update({
+                "current_score": self._assess_events(ip, state.events, now).score,
                 "first_seen": _round_ts(state.first_seen),
                 "last_seen": _round_ts(state.last_seen),
                 "stats": {
@@ -345,7 +425,8 @@ class RiskEngine:
                 "sparkline": self._sparkline(state, now),
                 "events": [
                     {"ts": _round_ts(ev.ts), "event": ev.kind, "msisdn": ev.msisdn_masked,
-                     "status": ev.status, "reason": ev.reason, "new_ip": flag}
+                     "status": ev.status, "reason": ev.reason, "scope": ev.scope,
+                     "new_ip": flag}
                     for ev, flag in reversed(events)
                 ],
             })
@@ -384,9 +465,14 @@ class RiskEngine:
                 "ips_tracked": len(self._ips),
                 "alerts_total": self._alert_seq,
             }
+        with self._dropped_lock:
+            counters["dropped"] = self.dropped
+        pending = self._queue
         return {
             "now": _round_ts(self.clock()),
-            "mode": "observe",
+            "mode": self.mode,
+            "observe_only": True,
+            "queue_size": pending.qsize() if pending is not None else 0,
             "window": s.window,
             "tz_offset_hours": s.tz_offset_hours,
             "levels": {"medium_at": s.medium_at, "high_at": s.high_at, "max_score": s.max_score},
