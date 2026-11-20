@@ -1,6 +1,6 @@
-"""Спринт 4: граф, сводка инцидента (шаблон и LLM), маршруты, attack.py --only pumping, дашборд.
+"""Модуль рисков: граф, сводка инцидента (шаблон и LLM), маршруты, attack.py --only pumping.
 
-unittest, FakeClock, без внешней сети (LLM подменяется; attack.py ходит в локальный тестовый сервер).
+unittest, FakeClock, без внешней сети: LLM подменяется, attack.py — в локальный тестовый сервер.
 """
 from __future__ import annotations
 
@@ -49,7 +49,8 @@ class GraphTest(unittest.TestCase):
         self.assertEqual([(n["label"], n["level"]) for n in ips], [("45.13.7.200", "high")])
         self.assertEqual(len(numbers), 12)
         self.assertEqual(len(graph["edges"]), 12)
-        self.assertTrue(all(e["source"] == "ip:45.13.7.200" and e["sends"] == 1 for e in graph["edges"]))
+        self.assertTrue(all(e["source"] == "ip:45.13.7.200" and e["sends"] == 1
+                            for e in graph["edges"]))
         self.assertEqual(numbers[0]["label"], "+996700***200")
         self.assertFalse(graph["truncated"])
 
@@ -60,14 +61,16 @@ class GraphTest(unittest.TestCase):
         graph = self.engine.graph()
         numbers = [n for n in graph["nodes"] if n["type"] == "number"]
         self.assertEqual(len(numbers), 1)
-        self.assertEqual(sorted(e["source"] for e in graph["edges"]), ["ip:192.0.2.1", "ip:192.0.2.2"])
+        self.assertEqual(sorted(e["source"] for e in graph["edges"]),
+                         ["ip:192.0.2.1", "ip:192.0.2.2"])
         self.assertTrue(all(e["verifies"] >= 1 for e in graph["edges"]))
 
     def test_limits_and_truncation(self):
         self.traffic.pumping_bot("45.13.7.200", count=6)
         self.traffic.normal_user(ip="192.0.2.1")
         one_ip = self.engine.graph(max_ips=1)
-        self.assertEqual([n["label"] for n in one_ip["nodes"] if n["type"] == "ip"], ["45.13.7.200"])
+        self.assertEqual([n["label"] for n in one_ip["nodes"] if n["type"] == "ip"],
+                         ["45.13.7.200"])
         self.assertTrue(one_ip["truncated"])
         few_numbers = self.engine.graph(max_numbers=3)
         self.assertEqual(sum(n["type"] == "number" for n in few_numbers["nodes"]), 3)
@@ -105,7 +108,8 @@ class SummaryTemplateTest(unittest.TestCase):
         pumping = next(i for i in self.engine.incidents(3600) if i["type"] == "pumping")
         self.assertEqual(pumping["first_high"]["at_number"], 6)
         self.assertGreater(pumping["first_high"]["after_seconds"], 0)
-        self.assertEqual(pumping["number_range"], {"first": "+996700***200", "last": "+996700***239"})
+        self.assertEqual(pumping["number_range"],
+                         {"first": "+996700***200", "last": "+996700***239"})
         self.assertEqual(pumping["sms_cost"], 40.0)
 
     def test_no_full_numbers(self):
@@ -223,9 +227,9 @@ class SummaryLlmTest(unittest.TestCase):
         self.assertEqual(opener.call_count, 2)
 
 
-class RiskApiSprint4Test(unittest.TestCase):
+class RiskGraphSummaryRoutesTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix="risk_s4_")
+        self.tmp = tempfile.mkdtemp(prefix="risk_routes_")
         self.clock = FakeClock()
         settings = Settings(secret_key=b"test-secret", log_dir=self.tmp,
                             outbox_path=os.path.join(self.tmp, "sms.jsonl"))
@@ -263,7 +267,8 @@ class RiskApiSprint4Test(unittest.TestCase):
                     r = self.get(f"{path}?window={bad}")
                     self.assertEqual((r.status, r.body["status"]), (400, "bad_request"))
                     self.assertIn("window", r.body["error"])
-                self.assertIsNone(FULL_NUMBER.search(json.dumps(self.get(path).body, ensure_ascii=False)))
+                body = json.dumps(self.get(path).body, ensure_ascii=False)
+                self.assertIsNone(FULL_NUMBER.search(body))
 
 
 class AttackScriptTest(unittest.TestCase):
@@ -321,7 +326,7 @@ class AttackScriptTest(unittest.TestCase):
         self.assertIn("Токен админки не передан", out.getvalue())
 
 
-class DashboardSprint4Test(unittest.TestCase):
+class DashboardRiskBlocksTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         path = os.path.join(os.path.dirname(__file__), "..", "app", "static", "dashboard.html")
@@ -331,7 +336,8 @@ class DashboardSprint4Test(unittest.TestCase):
         cls.html = html
 
     def test_new_blocks_and_paths(self):
-        for element_id in ("risk-summary-btn", "risk-summary", "risk-graph-svg", "risk-scatter-window"):
+        for element_id in ("risk-summary-btn", "risk-summary", "risk-graph-svg",
+                           "risk-scatter-window"):
             self.assertIn(f'id="{element_id}"', self.html)
         for path in ("/api/risk/graph", "/api/risk/summary"):
             self.assertIn(path, self.js)

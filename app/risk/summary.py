@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from .llm import LLMChain, configured_names, providers_from_settings
-from .signals import ACTION_TITLES, LEVEL_TITLES, classify
+from .signals import LEVEL_TITLES, classify, plural
 
 if TYPE_CHECKING:  # pragma: no cover
     from .engine import RiskEngine
@@ -45,14 +45,6 @@ LEGACY_TYPES = {"sms_pumping": "pumping", "code_bruteforce": "bruteforce",
 def incident_type(reasons: list[str]) -> str:
     """Старый код типа (поле type сводки) — через общий классификатор signals.classify."""
     return LEGACY_TYPES[classify(reasons, "medium")]
-
-
-def _plural(n: int, one: str, few: str, many: str) -> str:
-    if n % 10 == 1 and n % 100 != 11:
-        return one
-    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
-        return few
-    return many
 
 
 def _num(value: float) -> str:
@@ -96,8 +88,9 @@ class SummaryService:
 
     def template(self, facts: dict) -> str:
         p, cur = facts["period"], facts["currency"]
+        threat = LEVEL_RU.get(facts["threat_level"], facts["threat_level"])
         lines = [f"Период {p['from']}–{p['to']} по Бишкеку ({p['minutes']} мин). "
-                 f"Общий уровень угрозы: {LEVEL_RU.get(facts['threat_level'], facts['threat_level'])}."]
+                 f"Общий уровень угрозы: {threat}."]
         conversion = ("—" if facts["conversion"] is None
                       else f"{round(facts['conversion'] * 100)}%")
         lines.append(f"Отправлено SMS: {facts['sms_sent']}, из них подозрительных: "
@@ -109,12 +102,14 @@ class SummaryService:
             return "\n".join(lines)
         lines.append(f"Инцидентов: {len(incidents)}.")
         for i, inc in enumerate(incidents, 1):
+            level = LEVEL_RU.get(inc["level"], inc["level"])
             parts = [f"{i}. {inc['title']} с IP {inc['ip']} (с {inc['time']}): "
-                     f"риск {inc['score']} / 100, уровень {LEVEL_RU.get(inc['level'], inc['level'])}"]
+                     f"риск {inc['score']} / 100, уровень {level}"]
             n = inc["numbers"]
-            numbers = f"{n} {_plural(n, 'номер', 'номера', 'номеров')}"
+            numbers = f"{n} {plural(n, 'номер', 'номера', 'номеров')}"
             if inc["number_range"]:
-                numbers += f" подряд, от {inc['number_range']['first']} до {inc['number_range']['last']}"
+                span = inc["number_range"]
+                numbers += f" подряд, от {span['first']} до {span['last']}"
             parts.append(numbers)
             if inc["sms_sent"]:
                 parts.append(f"SMS: {inc['sms_sent']} (≈{_num(inc['sms_cost'])} {cur})")
@@ -143,7 +138,8 @@ class SummaryService:
         kinds = {inc["type"] for inc in incidents}
         tips = []
         if "pumping" in kinds:
-            tips.append("включить лимит send по IP и подсети и проверку конверсии по диапазонам номеров")
+            tips.append("включить лимит send по IP и подсети "
+                        "и проверку конверсии по диапазонам номеров")
         if kinds & {"bruteforce", "distributed"}:
             tips.append("проверить атакующие IP и при повторе включить режим блокировки (enforce)")
         if not tips:

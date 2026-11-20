@@ -49,7 +49,8 @@ class Background:
 
     def new_ip(self) -> str:
         with self._lock:
-            return f"{self.rng.choice(USER_NETS)}.{self.rng.randint(0, 255)}.{self.rng.randint(1, 254)}"
+            net = self.rng.choice(USER_NETS)
+            return f"{net}.{self.rng.randint(0, 255)}.{self.rng.randint(1, 254)}"
 
     def new_number(self) -> str:
         with self._lock:
@@ -122,7 +123,7 @@ class Background:
         self._threads.append(thread)
 
     def run_for(self, seconds: float, limit: Optional[int] = None) -> None:
-        """Запускать пользователей каждые interval±30% секунд в течение seconds (или limit штук)."""
+        """Запускать пользователей каждые interval±30% с в течение seconds (или limit штук)."""
         deadline = time.monotonic() + seconds
         launched = 0
         while (time.monotonic() < deadline and not self._no_more.is_set()
@@ -176,8 +177,8 @@ def distributed(base: str, ip: str, count: int = 50, attempts: int = 100) -> Cou
         stats[f"send {status}"] += 1
         time.sleep(0.05)
     for i in range(attempts):
-        status, _ = post(f"{base}/otp/verify",
-                         {"msisdn": numbers[i % count], "code": f"{random.randrange(10 ** 6):06d}"},
+        guess = f"{random.randrange(10 ** 6):06d}"
+        status, _ = post(f"{base}/otp/verify", {"msisdn": numbers[i % count], "code": guess},
                          headers)
         stats[f"verify {status}"] += 1
         time.sleep(0.05)
@@ -194,7 +195,9 @@ def check_forwarding(base: str, token: Optional[str]) -> None:
     if not token:
         return
     status, rows = get_json(f"{base}/api/risk/ips?limit=200", token)
-    if status == 200 and isinstance(rows, list) and rows and {r.get("ip") for r in rows} == {"127.0.0.1"}:
+    only_loopback = (isinstance(rows, list) and rows
+                     and {r.get("ip") for r in rows} == {"127.0.0.1"})
+    if status == 200 and only_loopback:
         print("ВНИМАНИЕ: все события пришли с 127.0.0.1 — сервер не доверяет X-Forwarded-For. "
               "Перезапустите его с OTP_TRUSTED_PROXIES=127.0.0.1.", flush=True)
 
@@ -205,7 +208,8 @@ def scenario_demo(base: str, outbox: str, token: Optional[str], interval: float,
     print("Сюжет демо: ~3,5 минуты. Откройте /dashboard?token=...#risk", flush=True)
 
     stage(1, "Обычные пользователи (60 с)",
-          "плитки и «Подметание» — случайное облако зелёных точек, у каждого IP один луч на графе.")
+          "плитки и «Подметание» — случайное облако зелёных точек, "
+          "у каждого IP один луч на графе.")
     bg.run_for(60)
     check_forwarding(base, token)
 
@@ -236,8 +240,10 @@ def scenario_demo(base: str, outbox: str, token: Optional[str], interval: float,
 
 def main(argv: Optional[list[str]] = None) -> int:
     p = argparse.ArgumentParser(description="Демо-трафик OTP-сервиса")
-    p.add_argument("--base", "--url", dest="base", default=os.getenv("OTP_URL", "http://127.0.0.1:8000"))
-    p.add_argument("--outbox", default=DEFAULT_OUTBOX, help="файл тестового SMS-транспорта сервиса")
+    p.add_argument("--base", "--url", dest="base",
+                   default=os.getenv("OTP_URL", "http://127.0.0.1:8000"))
+    p.add_argument("--outbox", default=DEFAULT_OUTBOX,
+                   help="файл тестового SMS-транспорта сервиса")
     p.add_argument("--token", default=os.getenv("DASHBOARD_TOKEN"), help="токен админки")
     p.add_argument("--users", type=int, default=10, help="обычных пользователей (без --scenario)")
     p.add_argument("--interval", type=float, default=3.0, help="пауза между пользователями, с")
@@ -255,7 +261,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 2
 
     if args.scenario == "demo":
-        bg = scenario_demo(base, args.outbox, args.token, args.interval, rng, args.pumping_interval)
+        bg = scenario_demo(base, args.outbox, args.token, args.interval, rng,
+                           args.pumping_interval)
     else:
         bg = Background(base, args.outbox, args.interval, rng)
         print(f"Обычные пользователи: {args.users}, интервал ~{args.interval} с", flush=True)

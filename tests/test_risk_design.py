@@ -1,18 +1,17 @@
-"""Design fix 1: язык жюри, тип атаки, честные формулировки (unittest)."""
+"""Тексты модуля рисков: язык для жюри, тип атаки, честные формулировки (unittest)."""
 from __future__ import annotations
 
-import json
 import os
 import re
 import unittest
 
 from app.risk import RiskEngine
 from app.risk.signals import INCIDENT_TYPES, SIGNAL_TITLES, classify
-from app.risk.simulate import FakeClock, Traffic, demo_story
+from app.risk.simulate import FakeClock, demo_story
 
 HTML_PATH = os.path.join(os.path.dirname(__file__), "..", "app", "static", "dashboard.html")
-AFFIRMATIVE = re.compile(r"\bзаблокирован\b|\bзаблокированы\b|\bотклон[её]н\b|отклоняются|сохранено",
-                         re.IGNORECASE)
+AFFIRMATIVE = re.compile(
+    r"\bзаблокирован\b|\bзаблокированы\b|\bотклон[её]н\b|отклоняются|сохранено", re.IGNORECASE)
 
 
 class IncidentTypeTest(unittest.TestCase):
@@ -50,8 +49,9 @@ class IncidentTypeTest(unittest.TestCase):
 
     def test_existing_fields_unchanged_and_new_added(self):
         row = self.engine.top_ips(limit=1)[0]
-        for field in ("ip", "score", "level", "would_action", "would_action_text", "reasons", "numbers",
-                      "sms_sent", "verify_attempts", "last_seen", "current_score", "sparkline"):
+        for field in ("ip", "score", "level", "would_action", "would_action_text", "reasons",
+                      "numbers", "sms_sent", "verify_attempts", "last_seen", "current_score",
+                      "sparkline"):
             self.assertIn(field, row)
         for field in ("incident_type", "incident_title", "incident_subtitle", "level_title",
                       "would_action_title", "detected", "savings"):
@@ -70,8 +70,8 @@ class IncidentTypeTest(unittest.TestCase):
     def test_classify_rules(self):
         self.assertEqual(classify(["fan_out"], "low"), "none")
         self.assertEqual(classify(["sequential", "no_conversion"], "medium"), "sms_pumping")
-        self.assertEqual(classify(["fan_out", "sequential", "no_conversion", "ip_limited"], "high"),
-                         "distributed_bruteforce")
+        reasons = ["fan_out", "sequential", "no_conversion", "ip_limited"]
+        self.assertEqual(classify(reasons, "high"), "distributed_bruteforce")
         self.assertEqual(classify(["fail_rate", "hammering_locked"], "medium"), "code_bruteforce")
         self.assertEqual(classify(["new_ip", "night"], "medium"), "suspicious")
 
@@ -86,15 +86,18 @@ class WordingTest(unittest.TestCase):
         detail = self.engine.ip_detail(self.ips["pumping_bot"])
         self.assertEqual([r["title"] for r in detail["reasons"]],
                          ["Массовая рассылка", "Перебор номеров по порядку", "Коды не вводятся"])
-        self.assertEqual(detail["reasons"][0]["detail"], "коды на 40 номеров с одного IP за 10 мин")
+        self.assertEqual(detail["reasons"][0]["detail"],
+                         "коды на 40 номеров с одного IP за 10 мин")
         meta_titles = {s["name"]: s["title"] for s in self.engine.meta()["signals"]}
         self.assertEqual(meta_titles, SIGNAL_TITLES)
 
     def test_detail_phrases(self):
-        brute = {r["name"]: r["detail"] for r in self.engine.ip_detail(self.ips["bruteforce"])["reasons"]}
+        brute_reasons = self.engine.ip_detail(self.ips["bruteforce"])["reasons"]
+        brute = {r["name"]: r["detail"] for r in brute_reasons}
         self.assertEqual(brute["fail_rate"], "20 неудачных проверок кода (100% попыток)")
         self.assertEqual(brute["hammering_locked"], "15 попыток после блокировки")
-        dist = {r["name"]: r["detail"] for r in self.engine.ip_detail(self.ips["distributed"])["reasons"]}
+        dist_reasons = self.engine.ip_detail(self.ips["distributed"])["reasons"]
+        dist = {r["name"]: r["detail"] for r in dist_reasons}
         self.assertEqual(dist["ip_limited"], "лимит 20 проверок/мин сработал 80 раз")
         self.assertEqual(dist["sequential"], "100% номеров идут подряд")
 
@@ -112,7 +115,8 @@ class DashboardWordingTest(unittest.TestCase):
     def setUpClass(cls):
         with open(HTML_PATH, encoding="utf-8") as f:
             cls.html = f.read()
-        cls.risk_js = re.search(r'<script id="risk-script">(.*?)</script>', cls.html, re.S).group(1)
+        script = re.search(r'<script id="risk-script">(.*?)</script>', cls.html, re.S)
+        cls.risk_js = script.group(1)
         start = cls.html.index('<div id="tab-risk"')
         cls.risk_markup = cls.html[start:cls.html.index("<script", start)]
 
@@ -120,8 +124,8 @@ class DashboardWordingTest(unittest.TestCase):
         for bad in ("Заблокирован", "отклоняются", "Сохранено", "98%", "#94a3b8", "rgba(239"):
             with self.subTest(bad=bad):
                 self.assertNotIn(bad, self.html)
-        for jargon in ("Веер", "Атака на блок", "Лимит IP", "Без подтверждений", "Топ IP", "Лента тревог",
-                       "В бою:", "(429)", "×2"):
+        for jargon in ("Веер", "Атака на блок", "Лимит IP", "Без подтверждений", "Топ IP",
+                       "Лента тревог", "В бою:", "(429)", "×2"):
             with self.subTest(jargon=jargon):
                 self.assertNotIn(jargon, self.risk_js + self.risk_markup)
         self.assertNotIn(".innerHTML", self.risk_js)
@@ -141,9 +145,11 @@ class DashboardWordingTest(unittest.TestCase):
         self.assertIn('id="risk-footer"', self.html[match.start():])
 
     def test_legacy_journal_untouched(self):
-        journal = self.html[self.html.index("<script>"):self.html.index('<script id="risk-script">')]
-        for snippet in ("async function load()", "function renderTiles()", "function renderTopIps()",
-                        "function renderBlocks()", "function renderEvents()", "/api/security/events?limit=300"):
+        start = self.html.index("<script>")
+        journal = self.html[start:self.html.index('<script id="risk-script">')]
+        for snippet in ("async function load()", "function renderTiles()",
+                        "function renderTopIps()", "function renderBlocks()",
+                        "function renderEvents()", "/api/security/events?limit=300"):
             self.assertIn(snippet, journal)
         for element_id in ("meta", "live", "tiles", "tableToggle", "legend", "chartBox", "chart",
                            "tooltip", "chartTable", "topIps", "blocks", "filters", "events"):

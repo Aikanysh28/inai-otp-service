@@ -187,7 +187,7 @@ def wait_risk_queue(base: str, token: str, timeout: float = 5.0) -> None:
 def attack_pumping(base: str, prefix: str = "99670073", count: int = 60, interval: float = 1.5,
                    jitter: float = 0.5, client_ip: Optional[str] = None,
                    token: Optional[str] = None, quiet: bool = False) -> dict:
-    """Только POST /otp/send на prefix+0000..count-1 подряд, без verify, с паузой interval±jitter."""
+    """POST /otp/send на prefix+0000..count-1 подряд, без verify, с паузой interval±jitter."""
     headers = {"X-Forwarded-For": client_ip} if client_ip else None
     price, currency = 1.0, "сом"
     if token:
@@ -204,8 +204,8 @@ def attack_pumping(base: str, prefix: str = "99670073", count: int = 60, interva
         stats[status] += 1
         sent += status == 200
         if not quiet:
-            print(f"\r  номер {i + 1}/{count} · отправлено SMS {sent} · ≈{sent * price:g} {currency}   ",
-                  end="", flush=True)
+            print(f"\r  номер {i + 1}/{count} · отправлено SMS {sent} "
+                  f"· ≈{sent * price:g} {currency}   ", end="", flush=True)
         if i < count - 1 and interval > 0:
             time.sleep(max(0.0, interval + random.uniform(-jitter, jitter)))
     if not quiet:
@@ -234,11 +234,12 @@ def report_pumping(result: dict, token: Optional[str]) -> bool:
     print("\n=== Атака 3: SMS pumping — номера подряд, коды не вводятся ===")
     print(f"  {'запросов send':<21}: {result['count']}")
     print(f"  {'SMS выдано (200)':<21}: {sent}")
-    print(f"  {'отказов':<21}: {rejected} {dict((k, v) for k, v in stats.items() if k != 200) or ''}")
+    rejected_by_status = {k: v for k, v in stats.items() if k != 200}
+    print(f"  {'отказов':<21}: {rejected} {rejected_by_status or ''}")
     print(f"  {'оценка стоимости':<21}: ≈{sent * result['price']:g} {cur}")
     if result["trusts_forwarded"] is False:
-        print("  ВНИМАНИЕ: сервер, похоже, не доверяет X-Forwarded-For — все события пришли с 127.0.0.1."
-              " Запустите сервер с OTP_TRUSTED_PROXIES=127.0.0.1.")
+        print("  ВНИМАНИЕ: сервер, похоже, не доверяет X-Forwarded-For — "
+              "все события пришли с 127.0.0.1. Запустите сервер с OTP_TRUSTED_PROXIES=127.0.0.1.")
     if not token:
         print("  Токен админки не передан (--token): вердикт модуля рисков не запрошен.")
         print("  Базовая защита не остановила рассылку (лимит send — только на номер).")
@@ -253,7 +254,8 @@ def report_pumping(result: dict, token: Optional[str]) -> bool:
     if risk["level"] == "high" and at:
         rest = max(0, sent - at)
         print(f"  Базовая защита не остановила рассылку (лимит send — только на номер). "
-              f"Модуль рисков обнаружил бота на {at}-м номере; в боевом режиме остальные {rest} SMS "
+              f"Модуль рисков обнаружил бота на {at}-м номере; "
+              f"в боевом режиме остальные {rest} SMS "
               f"были бы отклонены, экономия ≈{rest * result['price']:g} {cur}.")
         return True
     print("  Базовая защита не остановила рассылку (лимит send — только на номер), "

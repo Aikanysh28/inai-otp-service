@@ -84,8 +84,8 @@ def make_msisdn_id(msisdn: str, id_key: bytes) -> str:
     return hmac.new(id_key, message, hashlib.sha256).hexdigest()[:16]
 
 
-def mask_msisdn(msisdn: str) -> str:
-    """996700123456 -> +996700***456 (код страны и оператора, три звёздочки, три последние цифры)."""
+def display_mask(msisdn: str) -> str:
+    """996700123456 -> +996700***456: код страны и оператора, ***, три последние цифры."""
     digits = digits_only(msisdn)
     if len(digits) < 9:
         return "+" + "*" * len(digits)
@@ -149,7 +149,7 @@ def normalize(record: Any, *, id_key: bytes, msisdn: Optional[str] = None,
         digits = digits_only(msisdn)
         msisdn_id = make_msisdn_id(digits, id_key)
         tail = digits[-4:]
-        masked = mask_msisdn(digits)
+        masked = display_mask(digits)
     elif isinstance(record.get("msisdn"), str) and record["msisdn"]:
         # Режим чтения готового лога: только маска коллеги, «подряд» не вычислить.
         msisdn_id = "m:" + record["msisdn"]

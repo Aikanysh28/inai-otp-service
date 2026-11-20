@@ -23,8 +23,8 @@ from typing import Any, Callable, Optional
 from .config import RiskSettings
 
 ANTHROPIC_VERSION = "2023-06-01"
-# Свой User-Agent обязателен: Groq (защита от ботов) отвечает 403 на стандартный «Python-urllib/3.x»,
-# и такой ответ иначе выглядел бы как неверный ключ.
+# Свой User-Agent обязателен: Groq (защита от ботов) отвечает 403 на стандартный
+# «Python-urllib/3.x», и такой ответ иначе выглядел бы как неверный ключ.
 USER_AGENT = "otp-risk/1.0"
 DEFAULT_RETRY_AFTER = 60.0
 
@@ -271,7 +271,8 @@ class LLMChain:
         for provider in self.providers:
             skipped = self.cooling(provider.name)
             if skipped:
-                attempts.append({"provider": provider.name, "result": "skipped", "reason": skipped})
+                attempts.append({"provider": provider.name, "result": "skipped",
+                                 "reason": skipped})
                 last_reason = last_reason or skipped
                 continue
             remaining = deadline - self.monotonic()
@@ -283,9 +284,11 @@ class LLMChain:
                 text = self._call(provider, system, user, min(self.timeout, remaining))
             except LLMError as error:
                 last_reason = error.kind
-                attempts.append({"provider": provider.name, "result": "error", "reason": error.kind})
+                attempts.append({"provider": provider.name, "result": "error",
+                                 "reason": error.kind})
                 if error.kind == "rate_limited":
-                    self._cool(provider.name, "rate_limited", error.retry_after or DEFAULT_RETRY_AFTER)
+                    self._cool(provider.name, "rate_limited",
+                               error.retry_after or DEFAULT_RETRY_AFTER)
                 elif error.kind == "auth":
                     self._cool(provider.name, "auth", math.inf)  # до перезапуска
                 continue
@@ -293,7 +296,8 @@ class LLMChain:
             latency = int(round((self.monotonic() - t0) * 1000))
             if accepted is None:
                 last_reason = "fact_check"
-                attempts.append({"provider": provider.name, "result": "rejected", "reason": "fact_check"})
+                attempts.append({"provider": provider.name, "result": "rejected",
+                                 "reason": "fact_check"})
                 continue
             self.calls_ok += 1
             attempts.append({"provider": provider.name, "result": "ok"})

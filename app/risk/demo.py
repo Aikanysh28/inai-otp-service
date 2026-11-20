@@ -31,7 +31,8 @@ def print_report(engine: RiskEngine, ips: dict[str, str]) -> None:
     conversion = "—" if o["conversion"] is None else f"{o['conversion'] * 100:.1f}%"
     print("=== Сводка за час ===")
     print(f"  уровень угрозы      : {o['threat_level']}")
-    print(f"  активных IP         : {o['ips_active']} (medium: {o['ips_medium']}, high: {o['ips_high']})")
+    print(f"  активных IP         : {o['ips_active']} "
+          f"(medium: {o['ips_medium']}, high: {o['ips_high']})")
     print(f"  тревог              : {o['alerts']}")
     print(f"  SMS отправлено      : {o['sms_sent']}, подозрительных: {o['sms_suspicious']} "
           f"(≈{o['sms_cost_suspicious']:g} {o['currency']})")

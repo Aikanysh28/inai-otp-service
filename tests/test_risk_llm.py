@@ -1,4 +1,4 @@
-"""Спринт 5: бесплатные LLM-провайдеры для сводки (unittest; сеть не используется — urlopen подменён)."""
+"""LLM-провайдеры для сводки инцидента (unittest; сеть не используется — urlopen подменён)."""
 from __future__ import annotations
 
 import contextlib
@@ -75,7 +75,8 @@ class Router:
              "anthropic": "api.anthropic.com"}
 
     def __init__(self, **behaviour):
-        self.behaviour = behaviour  # провайдер -> функция(request, timeout) -> ответ или исключение
+        # провайдер -> функция(request, timeout) -> ответ или исключение
+        self.behaviour = behaviour
         self.calls: list[tuple[str, object]] = []
 
     def __call__(self, request, timeout=None):
@@ -125,7 +126,8 @@ class PresetsTest(unittest.TestCase):
         self.assertEqual(providers[0].model, "openai/gpt-oss-120b")
         groq_body = json.loads(build_request(providers[0], "s", "u").data)
         self.assertEqual(groq_body["reasoning_effort"], "low")  # gpt-oss: короткое рассуждение
-        self.assertNotIn("reasoning_effort", json.loads(build_request(providers[1], "s", "u").data))
+        body = json.loads(build_request(providers[1], "s", "u").data)
+        self.assertNotIn("reasoning_effort", body)
         self.assertEqual(providers[2].model, "openrouter/free")
 
     def test_ollama_without_key_and_skipping_keyless(self):
@@ -142,8 +144,10 @@ class PresetsTest(unittest.TestCase):
         s = RiskSettings(llm_providers="groq,gemini", llm_model="llama-3.1-8b-instant",
                          llm_base_url="http://127.0.0.1:9/v1/", **KEYS)
         first, second = providers_from_settings(s)
-        self.assertEqual((first.model, first.base_url), ("llama-3.1-8b-instant", "http://127.0.0.1:9/v1"))
-        self.assertEqual(second.base_url, "https://generativelanguage.googleapis.com/v1beta/openai")
+        self.assertEqual((first.model, first.base_url),
+                         ("llama-3.1-8b-instant", "http://127.0.0.1:9/v1"))
+        self.assertEqual(second.base_url,
+                         "https://generativelanguage.googleapis.com/v1beta/openai")
 
     def test_backward_compatible_anthropic(self):
         s = RiskSettings(llm_api_key="SECRET-legacy")
@@ -186,7 +190,8 @@ class ChainTest(unittest.TestCase):
                 router = Router(groq=action, gemini=action)
                 engine = engine_with(router, llm_providers="groq,gemini", **KEYS)
                 summary = engine.summary()
-                self.assertEqual((summary["source"], summary["fallback_reason"]), ("template", reason))
+                self.assertEqual((summary["source"], summary["fallback_reason"]),
+                                 ("template", reason))
                 self.assertIsNone(summary["provider"])
                 self.assertEqual(engine.meta()["llm"]["fallbacks"], {reason: 1})
 
@@ -249,7 +254,8 @@ class ChainTest(unittest.TestCase):
     def test_disabled_and_no_incidents_do_not_call(self):
         router = Router()
         disabled = engine_with(router).summary()
-        self.assertEqual((disabled["source"], disabled["fallback_reason"]), ("template", "disabled"))
+        self.assertEqual((disabled["source"], disabled["fallback_reason"]),
+                         ("template", "disabled"))
         quiet = engine_with(router, bot=False, llm_providers="groq", **KEYS).summary()
         self.assertEqual((quiet["source"], quiet["fallback_reason"]), ("template", "no_incidents"))
         self.assertIn("инцидентов не обнаружено", quiet["text"])
@@ -258,9 +264,9 @@ class ChainTest(unittest.TestCase):
 
 class PrivacyTest(unittest.TestCase):
     def test_only_aggregates_with_pseudonyms_leave(self):
-        text = ("За период обнаружено 3 инцидента. IP-1 вёл распределённый подбор, IP-2 рассылал "
-                "SMS pumping, IP-3 подбирал код к номеру. В боевом режиме источники получили бы отказ "
-                "или более строгие задержки.")
+        text = ("За период обнаружено 3 инцидента. IP-1 вёл распределённый подбор, "
+                "IP-2 рассылал SMS pumping, IP-3 подбирал код к номеру. "
+                "В боевом режиме источники получили бы отказ или более строгие задержки.")
         router = Router(groq=lambda r, t: openai_ok(text))
         clock = FakeClock()
         engine = RiskEngine(RiskSettings(llm_providers="groq", **KEYS), clock=clock, id_key=b"k")
@@ -304,7 +310,8 @@ class FactCheckTest(unittest.TestCase):
 
     def test_invented_number_rejected(self):
         summary = self.run_with(GOOD.replace("потери 12 сом", "потери 999 сом"))
-        self.assertEqual((summary["source"], summary["fallback_reason"]), ("template", "fact_check"))
+        self.assertEqual((summary["source"], summary["fallback_reason"]),
+                         ("template", "fact_check"))
 
     def test_invented_alias_rejected(self):
         summary = self.run_with(GOOD + " Похожая активность была с IP-9.")
@@ -322,7 +329,8 @@ class FactCheckTest(unittest.TestCase):
 
     def test_masks_survive_markdown_cleanup(self):
         text = GOOD + " Номера от +996700***200 до +996700***211, **важно**."
-        cleaned = fact_check(text, {"n": [12, 6, 200, 211, 996700], "c": "сом"}, {"IP-1": "1.2.3.4"})
+        facts = {"n": [12, 6, 200, 211, 996700], "c": "сом"}
+        cleaned = fact_check(text, facts, {"IP-1": "1.2.3.4"})
         self.assertIsNotNone(cleaned)
         self.assertIn("+996700***200", cleaned)
         self.assertIn("+996700***211", cleaned)
@@ -335,10 +343,12 @@ class FactCheckTest(unittest.TestCase):
     def test_number_formats(self):
         payload = {"sms": 1200, "cost": 1200.5, "period": {"from": "23:32"}}
         aliases = {"IP-1": "1.2.3.4"}
-        base = "Текст для проверки формата чисел, он достаточно длинный, чтобы пройти минимальную длину. "
+        base = ("Текст для проверки формата чисел, он достаточно длинный, "
+                "чтобы пройти минимальную длину. ")
         for number in ("1 200", "1200", "1 200,5", "1200.5", "23:32"):
             with self.subTest(number=number):
-                self.assertIsNotNone(fact_check(base + f"Значение {number} от IP-1.", payload, aliases))
+                text = base + f"Значение {number} от IP-1."
+                self.assertIsNotNone(fact_check(text, payload, aliases))
         self.assertIsNone(fact_check(base + "Значение 1 201.", payload, aliases))
 
 
@@ -354,7 +364,8 @@ class MetaAndApiTest(unittest.TestCase):
         self.engine = RiskEngine(RiskSettings(llm_providers="groq,gemini,ollama", **KEYS),
                                  clock=self.clock, id_key=b"k")
         self.log.add_sink(self.engine.sink)
-        eight = GOOD.replace("12 номеров", "8 номеров").replace("12 SMS", "8 SMS").replace("12 сом", "8 сом")
+        eight = (GOOD.replace("12 номеров", "8 номеров").replace("12 SMS", "8 SMS")
+                 .replace("12 сом", "8 сом"))
         self.router = Router(groq=lambda r, t: http_error(r.full_url, 401),
                              gemini=lambda r, t: openai_ok(eight))
         self.engine._summary.opener = self.router
@@ -369,7 +380,8 @@ class MetaAndApiTest(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def get(self, path):
-        return self.api.handle(Request.build("GET", path, {"X-Dashboard-Token": "dev"}, b"", "127.0.0.1"))
+        request = Request.build("GET", path, {"X-Dashboard-Token": "dev"}, b"", "127.0.0.1")
+        return self.api.handle(request)
 
     def test_meta_llm_block_and_no_keys_anywhere(self):
         summary = self.get("/api/risk/summary").body
@@ -391,16 +403,18 @@ class LlmCheckTest(unittest.TestCase):
     def test_check_reports_without_keys(self):
         def fake_urlopen(request, timeout=None):
             if request.full_url.endswith("/models"):
-                return _Resp({"data": [{"id": "llama-3.3-70b-versatile"}, {"id": "whisper-large"}]})
-            text = ("За период обнаружено 3 инцидента. IP-1 вёл распределённый подбор, IP-2 рассылал "
-                    "SMS pumping, IP-3 подбирал код к номеру. В боевом режиме источники получили бы "
-                    "отказ или более строгие задержки.")
+                models = [{"id": "llama-3.3-70b-versatile"}, {"id": "whisper-large"}]
+                return _Resp({"data": models})
+            text = ("За период обнаружено 3 инцидента. IP-1 вёл распределённый подбор, "
+                    "IP-2 рассылал SMS pumping, IP-3 подбирал код к номеру. "
+                    "В боевом режиме источники получили бы отказ или более строгие задержки.")
             return openai_ok(text)
 
         env = {"RISK_LLM_PROVIDERS": "groq,gemini", "RISK_LLM_GROQ_KEY": KEYS["llm_groq_key"]}
         out = io.StringIO()
         with mock.patch.dict(os.environ, env, clear=False), \
-                mock.patch("urllib.request.urlopen", fake_urlopen), contextlib.redirect_stdout(out):
+                mock.patch("urllib.request.urlopen", fake_urlopen), \
+                contextlib.redirect_stdout(out):
             code = llm_check.main()
         text = out.getvalue()
         self.assertEqual(code, 0)

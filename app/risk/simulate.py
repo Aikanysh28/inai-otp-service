@@ -9,6 +9,8 @@ import random
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
+from ..security_log import mask_msisdn
+
 # Демо-сюжет и тесты стартуют днём по Бишкеку, чтобы не срабатывал признак «ночь»
 DEFAULT_START = datetime.fromisoformat("2026-11-20T14:00:00+06:00").timestamp()
 
@@ -26,11 +28,6 @@ class FakeClock:
 
     def advance(self, seconds: float) -> None:
         self.now += seconds
-
-
-def colleague_mask(msisdn: str) -> str:
-    """Маска из журнала сервиса: 996770730000 -> 9967*****000."""
-    return msisdn[:4] + "*" * (len(msisdn) - 7) + msisdn[-3:]
 
 
 class Traffic:
@@ -52,7 +49,7 @@ class Traffic:
             "event": event,
         }
         if msisdn is not None:
-            record["msisdn"] = colleague_mask(msisdn)
+            record["msisdn"] = mask_msisdn(msisdn)
         if ip is not None:
             record["ip"] = ip
         record.update(details)

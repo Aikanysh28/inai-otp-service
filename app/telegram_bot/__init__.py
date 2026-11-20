@@ -51,7 +51,8 @@ class TelegramAlerts:
     def enqueue(self, assessment):
         text = (f"OTP · риск {assessment.level}\nIP: {assessment.ip}\n"
                 f"Оценка: {assessment.score}\n"
-                + "\n".join(f"• {reason.title} (+{reason.points})" for reason in assessment.reasons))
+                + "\n".join(f"• {reason.title} (+{reason.points})"
+                            for reason in assessment.reasons))
         try:
             self._messages.put_nowait(text)
         except Full:
@@ -61,7 +62,8 @@ class TelegramAlerts:
         while True:
             text = self._messages.get()
             payload = json.dumps({"chat_id": self._chat_id, "text": text}).encode()
-            request = Request(self._url, data=payload, headers={"Content-Type": "application/json"})
+            request = Request(self._url, data=payload,
+                              headers={"Content-Type": "application/json"})
             try:
                 self._send(request)
             except Exception as error:  # noqa: BLE001

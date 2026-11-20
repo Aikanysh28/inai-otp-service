@@ -1,4 +1,4 @@
-"""Design fix 2: окно «Почему такой риск?», хронология группами, факты базовой защиты, шрифты."""
+"""Окно «Почему такой риск?»: хронология группами, факты базовой защиты, шрифты (unittest)."""
 from __future__ import annotations
 
 import json
@@ -7,13 +7,13 @@ import re
 import unittest
 
 from app.risk import RiskEngine
-from app.risk.engine import defense_facts, timeline_groups
+from app.risk.engine import timeline_groups
 from app.risk.schema import RiskEvent
 from app.risk.simulate import FakeClock, Traffic, demo_story
 
 HTML_PATH = os.path.join(os.path.dirname(__file__), "..", "app", "static", "dashboard.html")
 FULL_NUMBER = re.compile(r"996\d{9}")
-MAX_FONT_BEFORE_DESIGN_FIX_1 = 20  # максимальный font-size в CSS вкладки «Риски» до design-fix-1, px
+MAX_RISK_FONT_PX = 20  # предел font-size в CSS вкладки «Риски»
 
 
 def ev(kind, ts, number=None, status=None):
@@ -46,13 +46,15 @@ class TimelineGroupsTest(unittest.TestCase):
         events += [ev("verify_locked", 6 + i, number, 423) for i in range(3)]
         groups = timeline_groups(events)["timeline_groups"]
         self.assertEqual([(g["event"], g["count"]) for g in groups],
-                         [("send_ok", 1), ("verify_fail", 4), ("verify_fail_blocked", 1), ("verify_locked", 3)])
+                         [("send_ok", 1), ("verify_fail", 4), ("verify_fail_blocked", 1),
+                          ("verify_locked", 3)])
 
     def test_different_numbers_merge_with_range(self):
         events = [ev("send_ok", i, f"+996700***{i:03d}", 200) for i in range(60)]
         (group,) = timeline_groups(events)["timeline_groups"]
         self.assertEqual((group["count"], group["numbers"], group["msisdn"]), (60, 60, None))
-        self.assertEqual((group["msisdn_first"], group["msisdn_last"]), ("+996700***000", "+996700***059"))
+        self.assertEqual((group["msisdn_first"], group["msisdn_last"]),
+                         ("+996700***000", "+996700***059"))
 
 
 class DemoDetailTest(unittest.TestCase):
@@ -68,7 +70,8 @@ class DemoDetailTest(unittest.TestCase):
     def test_pumping_bot(self):
         d = self.detail("pumping_bot")
         self.assertEqual(d["timeline_groups"][0]["event"], "send_ok")
-        self.assertEqual([(g["event"], g["count"]) for g in d["timeline_groups"]], [("send_ok", 40)])
+        self.assertEqual([(g["event"], g["count"]) for g in d["timeline_groups"]],
+                         [("send_ok", 40)])
         facts = d["defense_facts"]
         self.assertEqual((facts["numbers_blocked"], facts["locked_attempts"], facts["ip_limited"],
                           facts["send_rejected"]), (0, 0, 0, 0))
@@ -92,7 +95,8 @@ class DemoDetailTest(unittest.TestCase):
         for name in self.ips:
             with self.subTest(name=name):
                 d = self.detail(name)
-                for field in ("events", "stats", "reasons", "score", "level", "first_seen", "last_seen"):
+                for field in ("events", "stats", "reasons", "score", "level", "first_seen",
+                              "last_seen"):
                     self.assertIn(field, d)
                 self.assertIsNone(FULL_NUMBER.search(json.dumps(d, ensure_ascii=False)))
 
@@ -118,16 +122,17 @@ class DialogDashboardTest(unittest.TestCase):
         self.assertIn('<dialog class="risk-dialog" id="risk-dialog"', self.html)
         self.assertIn('aria-label="Закрыть"', self.html)
         self.assertIn("showModal()", self.js)
-        self.assertIn('addEventListener("close"', self.js)       # Esc закрывает <dialog> и шлёт close
+        self.assertIn('addEventListener("close"', self.js)       # Esc закрывает <dialog>
         self.assertIn("e.target === dialog", self.js)             # клик по фону
         self.assertIn("target.focus()", self.js)                  # фокус возвращается
         self.assertNotIn('id="risk-detail"', self.html)           # старой встроенной карточки нет
         # replaceChildren превращает null в текст «null» — в окне все списки детей фильтруются
-        self.assertIn("state.detailMissing ? el(\"span\", { class: \"risk-stale\", text: \"данные устарели\" }) : null].filter(Boolean)", self.js)
+        self.assertIn('state.detailMissing ? el("span", { class: "risk-stale", '
+                      'text: "данные устарели" }) : null].filter(Boolean)', self.js)
 
     def test_forbidden_wording(self):
-        for bad in ("Трафик с IP заблокирован", "остановила атаку", "предотвратила", "Сумма причин",
-                    "сейчас 0", "Статус защиты"):
+        for bad in ("Трафик с IP заблокирован", "остановила атаку", "предотвратила",
+                    "Сумма причин", "сейчас 0", "Статус защиты"):
             with self.subTest(bad=bad):
                 self.assertNotIn(bad, self.html)
         self.assertNotIn(".innerHTML", self.js)
@@ -140,8 +145,9 @@ class DialogDashboardTest(unittest.TestCase):
 
     def test_fonts(self):
         sizes = [int(x) for x in re.findall(r"font-size:\s*(\d+)px", self.risk_css)]
-        self.assertLessEqual(max(sizes), MAX_FONT_BEFORE_DESIGN_FIX_1)
-        self.assertRegex(self.risk_css, r"\.risk-dialog, \.risk-dialog button \{ font: inherit; \}")
+        self.assertLessEqual(max(sizes), MAX_RISK_FONT_PX)
+        self.assertRegex(self.risk_css,
+                         r"\.risk-dialog, \.risk-dialog button \{ font: inherit; \}")
         self.assertRegex(self.risk_css, r"#tab-risk button[^{]*\{ font-family: inherit; \}")
         self.assertRegex(self.risk_css, r"#tab-risk h2[^{]*\{ font-family: inherit; \}")
         self.assertNotRegex(self.risk_css, r"font-family:\s*var\(--font-serif\)")

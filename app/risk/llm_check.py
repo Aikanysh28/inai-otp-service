@@ -17,7 +17,8 @@ from typing import Optional
 from .config import RiskSettings
 from .engine import RiskEngine
 from .llm import (
-    PRESETS, USER_AGENT, LLMError, LLMProvider, complete, configured_names, providers_from_settings,
+    PRESETS, USER_AGENT, LLMError, LLMProvider, complete, configured_names,
+    providers_from_settings,
 )
 from .simulate import FakeClock, demo_story
 from .summary import LLM_SYSTEM, SummaryService, fact_check
@@ -51,7 +52,8 @@ def main() -> int:
     names = configured_names(settings)
     chain = providers_from_settings(settings)
     if not names:
-        print("LLM выключена: задайте RISK_LLM_PROVIDERS (например, groq) и ключ RISK_LLM_GROQ_KEY.")
+        print("LLM выключена: задайте RISK_LLM_PROVIDERS (например, groq) "
+              "и ключ RISK_LLM_GROQ_KEY.")
         return 1
     print(f"Цепочка из окружения: {', '.join(names)} · таймаут {settings.llm_timeout:g} с")
     active = {p.name for p in chain}
@@ -66,7 +68,8 @@ def main() -> int:
     service: SummaryService = engine._summary
     payload, aliases = service.llm_payload(service.facts(3600))
     user = json.dumps(payload, ensure_ascii=False)
-    print(f"Пробные данные: demo_story, инцидентов {payload['incidents_count']}, IP под псевдонимами")
+    print(f"Пробные данные: demo_story, инцидентов {payload['incidents_count']}, "
+          "IP под псевдонимами")
 
     accepted_any = False
     for provider in chain:
@@ -84,10 +87,13 @@ def main() -> int:
             continue
         elapsed = time.monotonic() - started
         checked = fact_check(text, payload, aliases)
-        print(f"  пробный вызов: {elapsed:.1f} с · проверка фактов: {'пройдена' if checked else 'НЕ пройдена'}")
-        print("  ответ:", service.restore_ips(checked or text, aliases).replace("\n", "\n         "))
+        verdict = "пройдена" if checked else "НЕ пройдена"
+        print(f"  пробный вызов: {elapsed:.1f} с · проверка фактов: {verdict}")
+        answer = service.restore_ips(checked or text, aliases)
+        print("  ответ:", answer.replace("\n", "\n         "))
         accepted_any |= checked is not None
-    print("\nИТОГ:", "есть принятый ответ" if accepted_any else "ни один провайдер не дал принятый ответ")
+    print("\nИТОГ:", "есть принятый ответ" if accepted_any
+          else "ни один провайдер не дал принятый ответ")
     return 0 if accepted_any else 1
 
 

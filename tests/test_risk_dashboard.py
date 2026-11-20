@@ -1,4 +1,4 @@
-"""Вкладка «Риски» в админке (unittest; работает и через pytest). Без браузера: проверки HTML/JS."""
+"""Вкладка «Риски» в админке: проверки HTML/JS без браузера (unittest, работает и в pytest)."""
 from __future__ import annotations
 
 import os
@@ -108,7 +108,8 @@ class DashboardTest(unittest.TestCase):
         style = re.search(r"<style>(.*?)</style>", self.html, re.S).group(1)
         new_part = style[style.index("вкладка «Риски»"):]
         classes = set(re.findall(r"\.([a-zA-Z][\w-]*)", new_part))
-        existing = {"tile", "tiles", "value", "badge", "card", "chips", "bar", "chart", "spacer", "mono"}
+        existing = {"tile", "tiles", "value", "badge", "card", "chips", "bar", "chart", "spacer",
+                    "mono"}
         self.assertEqual({c for c in classes if not c.startswith("risk-")} - existing, set())
 
     def test_no_new_colors_in_risk_part(self):

@@ -80,7 +80,7 @@ def wrong(code: str) -> str:
 
 
 def otp_story(stack: Stack) -> list[tuple]:
-    """send, ранний повторный send, 5 неверных verify, verify заблокированного, send после паузы."""
+    """send, ранний повторный send, 5 неверных verify, verify блокированного, send после паузы."""
     responses = [stack.send(), stack.send()]
     code = stack.code()
     for _ in range(5):

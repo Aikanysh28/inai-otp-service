@@ -41,7 +41,8 @@ SIGNAL_TITLES = {
 INCIDENT_TYPES = {
     "sms_pumping": ("SMS-флуд", "бот тратит бюджет на SMS"),
     "code_bruteforce": ("Подбор кода к номеру", "попытка угнать аккаунт"),
-    "distributed_bruteforce": ("Распределённый подбор кодов", "перебор по многим номерам с одного IP"),
+    "distributed_bruteforce": ("Распределённый подбор кодов",
+                               "перебор по многим номерам с одного IP"),
     "suspicious": ("Подозрительная активность", ""),
     "none": ("", ""),
 }
@@ -53,7 +54,8 @@ def classify(reasons: list[str], level: str) -> str:
         return "none"
     names = set(reasons)
     if {"sequential", "no_conversion"} <= names and not names & {"fail_rate", "ip_limited"}:
-        return "sms_pumping"  # номера по порядку, коды не вводятся — с «Массовой рассылкой» или без
+        # номера по порядку, коды не вводятся — с «Массовой рассылкой» или без
+        return "sms_pumping"
     if "fan_out" in names and names & {"fail_rate", "ip_limited"}:
         return "distributed_bruteforce"
     if {"fail_rate", "hammering_locked"} <= names:
@@ -78,7 +80,8 @@ class Signal:
         return SIGNAL_TITLES.get(self.name, self.name)
 
     def to_dict(self) -> dict:
-        return {"name": self.name, "title": self.title, "points": self.points, "detail": self.detail}
+        return {"name": self.name, "title": self.title, "points": self.points,
+                "detail": self.detail}
 
 
 @dataclass(slots=True)
@@ -180,7 +183,9 @@ def sequential(stats: WindowStats, s: RiskSettings) -> Optional[Signal]:
 
 
 def _near(sorted_tails: list[int], tail: int, gap: int) -> list[int]:
-    return sorted_tails[bisect_left(sorted_tails, tail - gap):bisect_right(sorted_tails, tail + gap)]
+    lo = bisect_left(sorted_tails, tail - gap)
+    hi = bisect_right(sorted_tails, tail + gap)
+    return sorted_tails[lo:hi]
 
 
 def no_conversion(stats: WindowStats, s: RiskSettings) -> Optional[Signal]:
@@ -200,9 +205,9 @@ def fail_rate(stats: WindowStats, s: RiskSettings) -> Optional[Signal]:
     share = failed / attempts
     if share < s.fail_rate_share:
         return None
+    checks = plural(failed, "неудачная проверка", "неудачные проверки", "неудачных проверок")
     return Signal("fail_rate", s.fail_rate_points,
-                  f"{failed} {plural(failed, 'неудачная проверка', 'неудачные проверки', 'неудачных проверок')} "
-                  f"кода ({round(share * 100)}% попыток)")
+                  f"{failed} {checks} кода ({round(share * 100)}% попыток)")
 
 
 def new_ip(stats: WindowStats, s: RiskSettings) -> Optional[Signal]:
@@ -217,9 +222,9 @@ def new_ip(stats: WindowStats, s: RiskSettings) -> Optional[Signal]:
 def hammering_locked(stats: WindowStats, s: RiskSettings) -> Optional[Signal]:
     if stats.verify_locked < s.hammering_min:
         return None
+    attempts = plural(stats.verify_locked, "попытка", "попытки", "попыток")
     return Signal("hammering_locked", s.hammering_points,
-                  f"{stats.verify_locked} {plural(stats.verify_locked, 'попытка', 'попытки', 'попыток')} "
-                  f"после блокировки")
+                  f"{stats.verify_locked} {attempts} после блокировки")
 
 
 def ip_limited(stats: WindowStats, s: RiskSettings) -> Optional[Signal]:

@@ -74,7 +74,8 @@ class _IpState:
     first_seen: float
     last_seen: float
     last: Assessment
-    level_seen: dict[str, float] = field(default_factory=dict)  # уровень -> когда был последний раз
+    # уровень -> когда он был в последний раз
+    level_seen: dict[str, float] = field(default_factory=dict)
     # Эпизод — непрерывная активность IP (паузы короче окна признаков)
     episode_start: float = 0.0
     episode_sends: int = 0  # send_ok за эпизод
@@ -257,7 +258,7 @@ class RiskEngine:
             return assessment
 
     def _is_new_ip(self, ev: RiskEvent) -> bool:
-        """Номер раньше подтверждался с других IP, а с этого — нет. Считается ДО учёта verify_ok."""
+        """Номер раньше подтверждался с других IP, а с этого — нет (считается ДО verify_ok)."""
         if ev.kind not in NEW_IP_KINDS or ev.msisdn_id is None:
             return False
         known = self._known.get(ev.msisdn_id)
@@ -482,7 +483,9 @@ class RiskEngine:
             return detail
 
     def graph(self, window: int = 600, max_ips: int = 15, max_numbers: int = 60) -> dict:
-        """Граф «IP → номера» за окно: IP по убыванию балла, номера — по msisdn_id (подпись — маска).
+        """Граф «IP → номера» за окно: IP по убыванию балла, номера — по msisdn_id.
+
+        Подпись номера — маска.
 
         Номер, к которому обращались несколько IP, — один узел с несколькими рёбрами.
         История событий IP хранится не дольше окна признаков (settings.window).
@@ -511,11 +514,11 @@ class RiskEngine:
             # так и бот остаётся «звездой», и у обычных пользователей виден их луч.
             queues = [(ip_id, level, list(own.items())) for ip_id, level, own in per_ip]
             budget = max(0, max_numbers)
-            while any(queue for _, _, queue in queues):
-                for ip_id, level, queue in queues:
-                    if not queue:
+            while any(pending for _, _, pending in queues):
+                for ip_id, level, pending in queues:
+                    if not pending:
                         continue
-                    num_id, (mask, kinds) = queue.pop(0)
+                    num_id, (mask, kinds) = pending.pop(0)
                     if num_id not in numbers:
                         if len(numbers) >= budget:
                             truncated = True
@@ -525,8 +528,9 @@ class RiskEngine:
                     node = numbers[num_id]
                     if LEVEL_RANK[level] > LEVEL_RANK[node["level"]]:
                         node["level"] = level
-                    edge = edges.setdefault((ip_id, num_id), {"source": ip_id, "target": num_id,
-                                                               "sends": 0, "verifies": 0, "fails": 0})
+                    edge = edges.setdefault((ip_id, num_id), {
+                        "source": ip_id, "target": num_id, "sends": 0, "verifies": 0, "fails": 0,
+                    })
                     for kind in kinds:
                         if kind in SEND_KINDS:
                             edge["sends"] += 1
@@ -549,9 +553,11 @@ class RiskEngine:
             result = []
             for st in states:
                 a = st.last
-                sends = sorted(((int(ev.msisdn_tail), ev.msisdn_masked) for ev, _ in st.events
-                                if ev.kind == "send_ok" and ev.msisdn_tail and ev.msisdn_tail.isdigit()),
-                               key=lambda item: item[0])
+                sends = sorted(
+                    ((int(ev.msisdn_tail), ev.msisdn_masked) for ev, _ in st.events
+                     if ev.kind == "send_ok" and ev.msisdn_tail and ev.msisdn_tail.isdigit()),
+                    key=lambda item: item[0],
+                )
                 names = [r.name for r in a.reasons]
                 number_range = None
                 if sends and "sequential" in names:

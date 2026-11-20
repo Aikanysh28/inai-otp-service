@@ -94,7 +94,7 @@ class NormalizeTest(unittest.TestCase):
         self.assertEqual(first.msisdn_tail, "3456")
         self.assertEqual(first.msisdn_id, make_msisdn_id("996700123456", KEY))
 
-    def test_without_raw_number_uses_colleague_mask(self):
+    def test_without_raw_number_uses_service_mask(self):
         ev = normalize(record("verify_failed", msisdn="9967*****456"), id_key=KEY)
         self.assertEqual(ev.msisdn_id, "m:9967*****456")
         self.assertIsNone(ev.msisdn_tail)
