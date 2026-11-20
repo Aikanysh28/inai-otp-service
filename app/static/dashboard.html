@@ -204,10 +204,80 @@
   @keyframes risk-flash { from { box-shadow: 0 0 0 3px var(--warning); } to { box-shadow: 0 0 0 0 transparent; } }
   .risk-footer { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-muted); }
   .risk-tip-title { font-weight: 600; margin-bottom: 4px; }
-  svg.chart.risk-graph { height: 360px; }
-  .risk-graph .risk-node-ip { cursor: pointer; }
-  .risk-graph .risk-node-ip:focus-visible { outline: none; stroke: var(--text-primary); stroke-width: 3; }
-  #risk-summary p { margin: 0 0 6px; }
+  /* Шрифты как во вкладке «Журнал»: акцент — начертанием и цветом, не размером.
+     Тема задаёт засечный шрифт для h1/h2 и значений плиток — во вкладке «Риски» и окне везде системный. */
+  #tab-risk h2, #tab-risk h3, #tab-risk .tile .value, #risk-dialog h2 { font-family: inherit; }
+  #tab-risk button, #tab-risk select, #tab-risk input { font-family: inherit; }
+  .risk-dialog, .risk-dialog button { font: inherit; }
+  .risk-dialog button { font-size: 13px; }
+  .tile.risk-tile-key { border-color: color-mix(in srgb, var(--critical) 45%, var(--border)); background: color-mix(in srgb, var(--critical) 6%, var(--surface-1)); }
+  .tile.risk-tile-key .value { color: var(--critical-text); }
+  .tile .risk-tile-note { color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+  .risk-sources-list { display: grid; gap: 10px; }
+  .risk-source-card { border: 1px solid var(--border); border-left: 4px solid var(--c); border-radius: 10px; padding: 10px 14px; cursor: pointer; background: color-mix(in srgb, var(--c) 5%, var(--surface-1)); }
+  .risk-source-card:hover, .risk-source-card[aria-current="true"] { border-color: var(--c); }
+  .risk-source-card:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+  .risk-source-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+  .risk-source-head .risk-ip { font-weight: 700; }
+  .risk-verdict { font-weight: 700; margin-left: auto; white-space: nowrap; }
+  .risk-kind { font-weight: 600; margin: 2px 0 6px; }
+  .risk-kind span { color: var(--text-secondary); font-weight: 400; }
+  .risk-meter { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; margin: 2px 0 8px; }
+  .risk-meter i { display: block; height: 100%; background: var(--c); }
+  .risk-bullets { margin: 0 0 6px; padding-left: 18px; font-size: 13px; color: var(--text-secondary); }
+  .risk-bullets li { margin: 1px 0; }
+  .risk-bullets b { color: var(--text-primary); font-weight: 600; }
+  .risk-source-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13px; }
+  .risk-source-foot .spacer { flex: 1; }
+  .risk-quiet { color: var(--text-muted); font-size: 12px; }
+  .risk-lowlist { margin-top: 10px; font-size: 13px; color: var(--text-secondary); }
+  .risk-lowlist summary { cursor: pointer; width: max-content; }
+  .risk-alert { background: color-mix(in srgb, var(--c) 8%, transparent); border-left-width: 4px; }
+  .risk-alert-head { font-weight: 600; }
+  .risk-alert-body { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+  .risk-alert-action { font-size: 13px; margin-top: 2px; }
+  .risk-tech { margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
+  .risk-tech summary { cursor: pointer; width: max-content; margin-bottom: 6px; }
+
+  /* ---------- окно «Почему такой риск?» ---------- */
+  .risk-dialog { width: min(680px, 92vw); max-height: 85vh; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); color: var(--text-primary); overflow: hidden; }
+  .risk-dialog[open] { display: flex; flex-direction: column; }
+  .risk-dialog::backdrop { background: color-mix(in srgb, var(--text-primary) 45%, transparent); }
+  @supports (backdrop-filter: blur(4px)) { .risk-dialog::backdrop { backdrop-filter: blur(4px); } }
+  .risk-dialog-head { position: relative; padding: 14px 52px 10px 18px; border-bottom: 1px solid var(--border); background: var(--surface-1); }
+  .risk-dialog-head h2 { margin: 0; }
+  .risk-dialog-kicker { color: var(--text-secondary); font-size: 12px; }
+  .risk-dialog-sub { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-top: 6px; font-size: 13px; color: var(--text-secondary); }
+  .risk-dialog-sub .badge { color: var(--text-primary); font-weight: 600; }
+  .risk-dialog-close { position: absolute; top: 12px; right: 14px; }
+  .risk-dialog-body { overflow-y: auto; padding: 14px 18px 18px; }
+  .risk-dialog-body h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; }
+  .risk-verdict-block { border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; background: color-mix(in srgb, var(--c) 8%, transparent); }
+  .risk-verdict-block.risk-neutral { background: var(--grid); }
+  .risk-verdict-label { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 2px; }
+  .risk-dialog .tiles { margin: 12px 0 0; }
+  .risk-scorebar { height: 10px; border-radius: 5px; background: var(--grid); overflow: hidden; }
+  .risk-scorebar i { display: block; height: 100%; background: var(--c); }
+  .risk-scoreticks { position: relative; height: 16px; font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
+  .risk-scoreticks span { position: absolute; top: 2px; transform: translateX(-50%); white-space: nowrap; border-left: 1px solid var(--text-muted); padding-left: 3px; }
+  .risk-weights { display: grid; grid-template-columns: max-content 3.5em 1fr; gap: 4px 10px; align-items: baseline; }
+  .risk-weights .mono { text-align: right; }
+  .risk-weights .risk-why-detail { color: var(--text-secondary); font-size: 13px; }
+  @media (max-width: 560px) {
+    .risk-weights { grid-template-columns: 1fr 3.5em; }
+    .risk-weights .risk-why-detail { grid-column: 1 / -1; margin-top: -2px; }
+  }
+  .risk-timeline td { white-space: nowrap; }
+  .risk-timeline td.risk-wrap { white-space: normal; }
+  .risk-result { font-weight: 600; }
+  .risk-result .mono { color: var(--text-muted); font-weight: 400; margin-left: 6px; font-size: 11px; }
+  .risk-skip td { color: var(--text-muted); font-style: italic; }
+  .risk-counters { margin-top: 14px; font-size: 13px; }
+  .risk-counters summary { cursor: pointer; width: max-content; }
+  .risk-counters dl { display: grid; grid-template-columns: max-content max-content; gap: 2px 16px; margin: 8px 0 0; }
+  .risk-counters dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .risk-counters .risk-zero { color: var(--text-muted); }
+  .risk-stale { color: var(--critical-text); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -264,37 +334,57 @@
   <div id="tab-risk" role="tabpanel" aria-labelledby="tabbtn-risk" hidden>
     <div class="card risk-notice" id="risk-notice" role="alert" hidden></div>
     <div id="risk-body">
-      <div class="risk-mode" id="risk-mode" hidden>Режим наблюдения: модуль оценивает риск и поднимает тревоги, но не меняет ответы сервиса. «В бою» — что было бы сделано при включённой защите.</div>
+      <div class="risk-mode" id="risk-mode" hidden><strong>Режим наблюдения.</strong> Система обнаруживает атаки и показывает, что заблокировала бы в боевом режиме. Ответы сервиса не меняются.</div>
 
       <section class="tiles" id="risk-tiles"><div class="empty">Загрузка…</div></section>
       <div class="details err risk-status" id="risk-st-overview"></div>
 
+      <section class="card" aria-labelledby="risk-sources-title">
+        <h2 id="risk-sources-title">Источники атак</h2>
+        <div id="risk-sources"><div class="empty">Загрузка…</div></div>
+        <details class="risk-lowlist" id="risk-lowlist" hidden>
+          <summary id="risk-lowlist-title"></summary>
+          <div class="scroll" id="risk-lowlist-table"></div>
+        </details>
+        <div class="details err risk-status" id="risk-st-ips"></div>
+      </section>
+
+      <section class="card">
+        <h2>Журнал срабатываний защиты</h2>
+        <div id="risk-alerts"><div class="empty">Загрузка…</div></div>
+        <div class="details err risk-status" id="risk-st-alerts"></div>
+      </section>
+
       <section class="card" id="risk-summary-card">
         <h2>Сводка инцидента <span class="spacer"></span>
           <button type="button" id="risk-summary-btn">Сводка за 10 минут</button></h2>
-        <div id="risk-summary"><div class="empty">Нажмите кнопку — модуль соберёт сводку по агрегатам за 10 минут.</div></div>
+        <div id="risk-summary"><div class="empty">Нажмите кнопку — система соберёт сводку по инцидентам за 10 минут.</div></div>
         <div class="details risk-status" id="risk-summary-meta"></div>
+        <details class="risk-source" id="risk-summary-source" hidden>
+          <summary>показать исходные данные</summary>
+          <pre class="mono risk-source-data" id="risk-summary-data"></pre>
+        </details>
         <div class="details err risk-status" id="risk-st-summary"></div>
       </section>
 
       <div class="grid2">
         <section class="card">
-          <h2>Динамика риска, последний час</h2>
-          <div class="details risk-sub">События по минутам; цвет — уровень риска IP в момент события. Время по Бишкеку.</div>
+          <h2>Запросы по уровню риска, по минутам</h2>
+          <div class="details risk-sub">Цвет — уровень риска источника в момент запроса. Время по Бишкеку.</div>
           <div class="legend" id="risk-timeline-legend"></div>
           <div class="chart-box" id="risk-timeline-box">
-            <svg class="chart" id="risk-timeline-svg" role="img" aria-label="Столбцы событий по минутам, сложенные по уровням риска"></svg>
+            <svg class="chart" id="risk-timeline-svg" role="img" aria-label="Столбцы запросов по минутам, сложенные по уровням риска"></svg>
             <div class="tooltip" id="risk-timeline-tip"></div>
           </div>
           <div class="details err risk-status" id="risk-st-timeline"></div>
         </section>
         <section class="card">
-          <h2>«Подметание» номеров <span class="spacer"></span>
+          <h2>Как бот перебирает номера <span class="spacer"></span>
             <span class="risk-filter" id="risk-scatter-window" role="group" aria-label="Окно графика">
               <button type="button" data-window="300" aria-pressed="true">5 мин</button>
               <button type="button" data-window="1800" aria-pressed="false">30 мин</button>
             </span></h2>
-          <div class="details risk-sub">Обычные пользователи — случайное облако. Бот, перебирающий номера подряд, рисует линию.</div>
+          <div class="details risk-sub">Люди — случайные точки. Бот, идущий по номерам подряд, рисует линию.</div>
           <div class="legend" id="risk-scatter-legend"></div>
           <div class="chart-box" id="risk-scatter-box">
             <svg class="chart" id="risk-scatter-svg" role="img" aria-label="Точечная диаграмма: время и последние 4 цифры номера"></svg>
@@ -305,8 +395,8 @@
       </div>
 
       <section class="card">
-        <h2>Граф «IP → номера», 10 минут</h2>
-        <div class="details risk-sub">Бот — «звезда» из одного IP и многих номеров; обычный пользователь — точка с одним лучом. Клик по IP — разбор балла.</div>
+        <h2>Кто на какие номера запрашивал коды</h2>
+        <div class="details risk-sub">Звезда — один IP рассылает коды на много номеров.</div>
         <div class="legend" id="risk-graph-legend"></div>
         <div class="chart-box" id="risk-graph-box">
           <svg class="chart risk-graph" id="risk-graph-svg" role="img" aria-label="Граф связей IP-адресов и номеров"></svg>
@@ -316,28 +406,21 @@
         <div class="details err risk-status" id="risk-st-graph"></div>
       </section>
 
-      <section class="card">
-        <h2>Топ IP <span class="spacer"></span>
-          <span class="risk-filter" id="risk-filter" role="group" aria-label="Фильтр по уровню">
-            <button data-level="low" aria-pressed="true">Все</button>
-            <button data-level="medium" aria-pressed="false">Средний и выше</button>
-            <button data-level="high" aria-pressed="false">Только высокий</button>
-          </span></h2>
-        <div class="details risk-sub">Оценка на момент последней активности IP за час. Клик или Enter — разбор балла.</div>
-        <div class="scroll" id="risk-ips"><div class="empty">Загрузка…</div></div>
-        <div class="details err risk-status" id="risk-st-ips"></div>
-      </section>
+      <dialog class="risk-dialog" id="risk-dialog" aria-labelledby="risk-dialog-title">
+        <div class="risk-dialog-head">
+          <div class="risk-dialog-kicker" id="risk-dialog-kicker"></div>
+          <h2 id="risk-dialog-title">Загрузка…</h2>
+          <button type="button" class="risk-dialog-close" id="risk-dialog-close" aria-label="Закрыть">✕</button>
+          <div class="risk-dialog-sub" id="risk-dialog-sub"></div>
+        </div>
+        <div class="risk-dialog-body" id="risk-dialog-body"></div>
+      </dialog>
 
-      <section class="card" id="risk-detail" aria-live="polite" hidden></section>
-
-      <section class="card">
-        <h2>Лента тревог</h2>
-        <div id="risk-alerts"><div class="empty">Загрузка…</div></div>
-        <div class="details err risk-status" id="risk-st-alerts"></div>
-      </section>
-
-      <footer class="risk-footer" id="risk-footer"></footer>
-      <div class="details err risk-status" id="risk-st-meta"></div>
+      <details class="risk-tech" id="risk-tech">
+        <summary>Технические детали <span class="badge s-warning" id="risk-tech-warn" hidden>есть потери событий</span></summary>
+        <footer class="risk-footer" id="risk-footer"></footer>
+        <div class="details err risk-status" id="risk-st-meta"></div>
+      </details>
     </div>
   </div>
 </div>
@@ -561,20 +644,27 @@
   const LEVELS = {
     low:    { name: "Низкий",  badge: "s-good",     color: "var(--good)" },
     medium: { name: "Средний", badge: "s-warning",  color: "var(--warning)" },
-    high:   { name: "Высокий", badge: "s-critical", color: "var(--critical)" },
+    high:   { name: "Критический", badge: "s-critical", color: "var(--critical)" },
   };
   const LEVEL_KEYS = ["low", "medium", "high"];
   const lvl = level => LEVELS[level] || LEVELS.low;
-  const SIGNALS = {
-    fan_out: "Веер", sequential: "Подряд", no_conversion: "Без подтверждений", fail_rate: "Ошибки ввода",
-    new_ip: "Новый IP", hammering_locked: "Атака на блок", ip_limited: "Лимит IP", night: "Ночь",
-  };
+  // Названия признаков приходят из API (reason.title); здесь — только запасной вариант
+  const signalTitle = r => r.title || r.name;
   const EVENTS = {
-    send_ok: "Код выдан", send_rejected: "Отказ в выдаче", verify_ok: "Код подтверждён",
+    send_ok: "Код отправлен", send_rejected: "Отправка отклонена лимитом", verify_ok: "Код подтверждён",
     verify_fail: "Неверный код", verify_expired: "Код истёк", number_blocked: "Номер заблокирован",
-    verify_locked: "Проверка заблок. номера", ip_rate_limited: "Лимит проверок по IP",
+    verify_locked: "Проверка номера в блоке", ip_rate_limited: "Лимит проверок",
     bad_request: "Неверный запрос", store_unavailable: "Хранилище недоступно",
   };
+  const SEND_REASONS = { cooldown: "слишком частый запрос", limit: "лимит отправок на номер",
+    blocked: "номер в блоке", frozen: "владелец заморозил коды" };
+  const ACTION_FULL = { high: "блокировка запросов с этого IP", medium: "замедление запросов с этого IP" };
+  const plural = (n, one, few, many) => {
+    const a = Math.abs(n) % 100, b = a % 10;
+    return a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many;
+  };
+  const capital = t => t ? t[0].toUpperCase() + t.slice(1) : t;
+  const riskText = score => `Риск ${score} / 100`;
   const SEG_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-4)", "var(--series-3)"];
 
   // ---------- форматирование: время всегда по Бишкеку ----------
@@ -627,7 +717,7 @@
     overview: null, ips: null, timeline: null, scatter: null, meta: null, detail: null,
     alerts: [], lastAlertId: 0, alertsLoaded: false, alertsDirty: false, scatterShown: [],
     scatterWindow: 300, graph: null, graphNodes: [], summaryBusy: false, unseen: 0, fresh: new Map(),
-    minLevel: "low", selected: null, detailMissing: false, fatal: null,
+    selected: null, detailMissing: false, fatal: null, opener: null, countersOpen: false,
     busyFast: false, busySlow: false, busyCount: false,
   };
 
@@ -689,20 +779,24 @@
   function renderTiles() {
     const o = state.overview;
     if (!o) return;
-    const tile = (label, value, sub, small) => el("div", { class: "tile" },
+    const tile = (label, value, sub, opts) => el("div", { class: "tile" + (opts && opts.key ? " risk-tile-key" : "") },
       el("div", { class: "label", text: label }),
-      el("div", { class: "value" + (small ? " risk-value-sm" : "") }, value),
-      el("div", { class: "sub", text: sub || " " }));
+      el("div", { class: "value" + (opts && opts.small ? " risk-value-sm" : "") }, value),
+      el("div", { class: opts && opts.note ? "risk-tile-note" : "sub", text: sub || " " }));
+    const high = o.ips_high, medium = o.ips_medium;
+    const sources = high || medium
+      ? [high ? `${num(high)} ${plural(high, "критический", "критических", "критических")}` : null,
+         medium ? `${num(medium)} ${plural(medium, "средний", "средних", "средних")}` : null].filter(Boolean).join(" · ")
+      : "нет";
     const conversion = o.conversion == null ? "—"
-      : (o.conversion * 100).toLocaleString("ru-RU", { maximumFractionDigits: 1 }) + "%";
+      : (o.conversion * 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 }) + "%";
     $("risk-tiles").replaceChildren(
-      tile("Уровень угрозы", levelBadge(o.threat_level, "risk-big"), "сейчас"),
-      tile("IP под наблюдением", `Высокий: ${num(o.ips_high)} · Средний: ${num(o.ips_medium)}`,
-        `из ${num(o.ips_active)} активных`, true),
-      tile("Тревоги", num(o.alerts), "за час"),
-      tile("Подозрительные SMS", `${num(o.sms_suspicious)} из ${num(o.sms_sent)}`,
-        `≈ ${num(o.sms_cost_suspicious)} ${o.currency} потрачено ботами`, true),
-      tile("Конверсия", conversion, "подтверждено / отправлено"),
+      tile("Уровень угрозы", levelBadge(o.threat_level, "risk-big"), "за последний час", { small: true }),
+      tile("Источники атак", sources, `из ${num(o.ips_active)} активных IP`, { small: true }),
+      tile("Срабатывания защиты", num(o.alerts), "за час"),
+      tile("Потрачено на ботов", `≈${num(o.sms_cost_suspicious)} ${o.currency}`,
+        `${num(o.sms_suspicious)} из ${num(o.sms_sent)} SMS`, { key: true, note: true }),
+      tile("SMS подтверждено", conversion, "у людей обычно 70–90%"),
     );
   }
 
@@ -942,18 +1036,38 @@
   });
 
   // ---------- сводка инцидента: только по кнопке ----------
+  const PROVIDER_NAMES = { groq: "Groq", gemini: "Gemini", openrouter: "OpenRouter",
+    ollama: "Ollama", anthropic: "Anthropic" };
+  const FALLBACK_REASONS = {
+    disabled: "LLM не настроена", no_incidents: "инцидентов нет — модель не вызывалась",
+    network: "нет связи с провайдером", auth: "неверный ключ", rate_limited: "лимит провайдера",
+    bad_response: "некорректный ответ модели", fact_check: "ответ модели не прошёл проверку фактов",
+    timeout: "провайдер не ответил вовремя",
+  };
+  function summarySource(d) {
+    if (d.source === "llm") {
+      const seconds = (Number(d.latency_ms) || 0) / 1000;
+      return `сгенерировано ${PROVIDER_NAMES[d.provider] || d.provider} · ${d.model} за ` +
+        `${seconds.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} с · факты проверены`;
+    }
+    const reason = FALLBACK_REASONS[d.fallback_reason] || d.fallback_reason;
+    return "по шаблону" + (reason ? ` (причина: ${reason})` : "");
+  }
+
   async function loadSummary() {
     if (state.summaryBusy) return;
     state.summaryBusy = true;
     const btn = $("risk-summary-btn");
     btn.disabled = true;
-    btn.textContent = "Собираем…";
+    btn.textContent = "Генерируем…";
     await guard("summary", () => api("/api/risk/summary", { window: 600 }), d => {
       const paragraphs = String(d.text || "").split("\n").filter(Boolean).map(t => el("p", { text: t }));
       $("risk-summary").replaceChildren(...(paragraphs.length ? paragraphs : [empty("Сводка пуста")]));
-      const source = d.source === "llm" ? "сгенерировано LLM по агрегатам" : "по шаблону";
-      $("risk-summary-meta").textContent =
-        `${source} · ${hms(d.generated_at)} по Бишкеку` + (d.cached ? " · из кеша (30 с)" : "");
+      $("risk-summary-meta").textContent = summarySource(d) + ` · ${hms(d.generated_at)} по Бишкеку` +
+        (d.cached ? " · из кеша (30 с)" : "");
+      const incidents = Array.isArray(d.incidents) ? d.incidents : [];
+      $("risk-summary-data").textContent = JSON.stringify(incidents, null, 2);
+      $("risk-summary-source").hidden = !incidents.length;
     }, 0);
     btn.disabled = false;
     btn.textContent = "Сводка за 10 минут";
@@ -972,178 +1086,316 @@
       el("span", { text: "● код выдан · ○ отказ в выдаче" }));
   }
 
-  // ---------- 5. Топ IP ----------
-  function sparkline(values) {
-    const svg = svgEl("svg", { class: "risk-spark", viewBox: "0 0 60 16", role: "img",
-      "aria-label": `событий по минутам: ${values.join(", ")}` });
-    const max = Math.max(1, ...values), n = Math.max(1, values.length - 1);
-    const pts = values.map((v, i) => `${(i / n * 58 + 1).toFixed(1)},${(15 - v / max * 14).toFixed(1)}`).join(" ");
-    svg.append(svgEl("polyline", { points: pts, fill: "none", stroke: "currentColor", "stroke-width": 1.5 }));
-    return svg;
+  // ---------- 5. Источники атак ----------
+  function quietText(row) {
+    const now = state.now || Date.now() / 1000;
+    const minutes = Math.floor(Math.max(0, now - row.last_seen) / 60);
+    return minutes < 1 ? "атака прекратилась меньше минуты назад"
+      : `атака прекратилась ${minutes} ${plural(minutes, "минуту", "минуты", "минут")} назад`;
   }
-  const reasonChips = reasons => reasons.length
-    ? el("div", { class: "chips risk-chips" }, reasons.map(r => el("span", {
-        class: "risk-chip", title: r.detail, text: `${SIGNALS[r.name] || r.name} +${r.points}` })))
-    : el("span", { class: "details", text: "—" });
 
-  function renderIps() {
-    const rows = state.ips, box = $("risk-ips");
-    if (!rows) return;
-    if (!rows.length) {
-      box.replaceChildren(empty(state.minLevel === "low" ? EMPTY_TEXT : "Нет IP с таким уровнем"));
-      return;
+  function detectionText(row) {
+    const action = `В боевом режиме: ${row.would_action_title}`;
+    if (row.incident_type === "sms_pumping" && row.first_high) {
+      let text = `Обнаружен на ${row.first_high.at_number}-м номере · ${action}`;
+      if (row.savings && row.savings.sms)
+        text += `, можно было сэкономить ≈${num(row.savings.sms)} SMS (${num(row.savings.cost)} ${row.savings.currency})`;
+      return text;
     }
+    const moment = row.first_high || row.detected;
+    const parts = [];
+    if (moment) parts.push(`Обнаружен через ${num(Math.round(moment.after_seconds))} с`);
+    if (row.verify_attempts) parts.push(`попыток: ${num(row.verify_attempts)}`);
+    parts.push(action);
+    return parts.join(" · ");
+  }
+
+  function sourceCard(row) {
+    const level = lvl(row.level);
+    const reasons = (row.reasons || []).slice().sort((a, b) => b.points - a.points);
+    const card = el("article", { class: `risk-source-card ${level.badge}`, tabindex: 0, role: "button",
+        "data-ip": row.ip, "aria-current": state.selected === row.ip ? "true" : "false",
+        "aria-label": `${row.ip}: ${row.incident_title || "подозрительная активность"}, ${riskText(row.score)}. Открыть разбор риска` },
+      el("div", { class: "risk-source-head" },
+        el("span", { class: "mono risk-ip", text: row.ip }),
+        el("span", { class: `badge ${level.badge} risk-verdict`, text: `${level.name} · ${riskText(row.score)}` })),
+      el("div", { class: "risk-kind" }, row.incident_title || "Подозрительная активность",
+        row.incident_subtitle ? el("span", { text: ` — ${row.incident_subtitle}` }) : null),
+      el("div", { class: "risk-meter", "aria-hidden": "true" }, el("i", { style: { width: `${row.score}%` } })),
+      el("ul", { class: "risk-bullets" }, reasons.map(r => el("li", null,
+        el("b", { text: signalTitle(r) }), `: ${r.detail}`))),
+      el("div", { class: "risk-source-foot" },
+        el("span", { text: detectionText(row) }),
+        row.current_score < row.score ? el("span", { class: "risk-quiet", text: quietText(row) }) : null,
+        el("span", { class: "spacer" }),
+        el("button", { type: "button", class: "risk-why", text: "Почему такой риск? →", tabindex: -1 })));
+    return card;
+  }
+
+  function renderSources() {
+    const rows = state.ips;
+    if (!rows) return;
+    const box = $("risk-sources");
     const focusedIp = document.activeElement && document.activeElement.closest &&
-      document.activeElement.closest("#risk-ips tr[data-ip]") ? document.activeElement.getAttribute("data-ip") : null;
-    const head = el("tr", null, ["IP", "Балл", "Уровень", "Причины"].map(t => el("th", { text: t })),
-      ["Номеров", "SMS", "Попыток"].map(t => el("th", { class: "num", text: t })),
-      el("th", { text: "Активность" }), el("th", { text: "В бою" }));
-    const body = rows.map(r => {
-      const score = el("div", { class: "bar-cell" },
-        el("div", { class: "bar", style: { width: Math.max(2, r.score) + "px", background: lvl(r.level).color } }),
-        el("span", { text: r.score }),
-        r.current_score < r.score ? el("span", { class: "risk-now", text: `сейчас ${r.current_score}` }) : null);
-      return el("tr", { class: "risk-row", tabindex: 0, "data-ip": r.ip,
-          "aria-selected": state.selected === r.ip ? "true" : "false" },
-        el("td", { class: "mono", text: r.ip }), el("td", null, score), el("td", null, levelBadge(r.level)),
-        el("td", null, reasonChips(r.reasons)),
-        el("td", { class: "num", text: num(r.numbers) }), el("td", { class: "num", text: num(r.sms_sent) }),
-        el("td", { class: "num", text: num(r.verify_attempts) }),
-        el("td", null, sparkline(r.sparkline || [])), el("td", { text: r.would_action_text }));
-    });
-    box.replaceChildren(el("table", null, el("thead", null, head), el("tbody", null, body)));
+      document.activeElement.closest("#risk-sources [data-ip]")
+        ? document.activeElement.closest("#risk-sources [data-ip]").getAttribute("data-ip") : null;
+    const risky = rows.filter(r => r.level !== "low");
+    const calm = rows.filter(r => r.level === "low");
+    box.replaceChildren(risky.length
+      ? el("div", { class: "risk-sources-list" }, risky.map(sourceCard))
+      : empty(rows.length ? "Атак не обнаружено — все источники с низким риском" : EMPTY_TEXT));
+    const low = $("risk-lowlist");
+    low.hidden = !calm.length;
+    if (calm.length) {
+      const n = calm.length;
+      $("risk-lowlist-title").textContent = n % 10 === 1 && n % 100 !== 11
+        ? `и ещё ${n} обычный пользователь с низким риском`
+        : `и ещё ${n} обычных ${plural(n, "пользователя", "пользователя", "пользователей")} с низким риском`;
+      $("risk-lowlist-table").replaceChildren(el("table", null,
+        el("thead", null, el("tr", null, el("th", { text: "IP" }),
+          ["Риск", "Номеров", "SMS"].map(t => el("th", { class: "num", text: t })))),
+        el("tbody", null, calm.map(r => el("tr", { class: "risk-row", tabindex: 0, "data-ip": r.ip },
+          el("td", { class: "mono", text: r.ip }), el("td", { class: "num", text: `${r.score} / 100` }),
+          el("td", { class: "num", text: num(r.numbers) }), el("td", { class: "num", text: num(r.sms_sent) }))))));
+    }
     if (focusedIp) {
-      const again = [...box.querySelectorAll("tr[data-ip]")].find(tr => tr.getAttribute("data-ip") === focusedIp);
+      const again = document.querySelector(`#risk-sources [data-ip="${CSS.escape(focusedIp)}"]`);
       if (again) again.focus();
     }
   }
 
-  $("risk-ips").addEventListener("click", e => {
-    const tr = e.target.closest("tr[data-ip]");
-    if (tr) openDetail(tr.getAttribute("data-ip"));
-  });
-  $("risk-ips").addEventListener("keydown", e => {
-    const tr = e.target.closest("tr[data-ip]");
-    if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openDetail(tr.getAttribute("data-ip")); }
-  });
-  $("risk-filter").addEventListener("click", e => {
-    const b = e.target.closest("button[data-level]");
-    if (!b) return;
-    state.minLevel = b.getAttribute("data-level");
-    $("risk-filter").querySelectorAll("button").forEach(x =>
-      x.setAttribute("aria-pressed", String(x.getAttribute("data-level") === state.minLevel)));
-    guard("ips", fetchIps, d => { state.ips = d; renderIps(); }, FAST_MS);
-  });
-  const fetchIps = () => api("/api/risk/ips", { limit: 20, min_level: state.minLevel });
+  const openFromList = e => {
+    const target = e.target.closest("[data-ip]");
+    if (!target) return;
+    if (e.type === "keydown") {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+    }
+    openDetail(target.getAttribute("data-ip"));
+  };
+  for (const id of ["risk-sources", "risk-lowlist-table"]) {
+    $(id).addEventListener("click", openFromList);
+    $(id).addEventListener("keydown", openFromList);
+  }
+  const fetchIps = () => api("/api/risk/ips", { limit: 200, min_level: "low" });
 
-  // ---------- 6. Карточка IP ----------
+  // ---------- 6. Окно «Почему такой риск?» (нативный <dialog>) ----------
+  const dialog = $("risk-dialog");
+  const TIMELINE_EVENTS = {
+    send_ok: ["Код выдан", "Выдан"], send_rejected: ["Отправка отклонена", "Отказ: лимит отправки"],
+    verify_ok: ["Код подтверждён", "Подтверждён"], verify_fail: ["Неверный код", "Ошибка"],
+    verify_fail_blocked: ["Неверный код → номер заблокирован", "Блокировка номера"],
+    number_blocked: ["Номер заблокирован", "Блокировка номера"],
+    verify_locked: ["Проверка заблокированного номера", "Отказ: номер заблокирован"],
+    verify_expired: ["Код истёк", "Истёк"], ip_rate_limited: ["Лимит проверок по IP", "Лимит"],
+    bad_request: ["Неверный запрос", "Ошибка запроса"], store_unavailable: ["Хранилище недоступно", "Сбой"],
+  };
+
   function openDetail(ip) {
+    if (!dialog.open) state.opener = document.activeElement;
     state.selected = ip;
     state.detail = null;
     state.detailMissing = false;
-    const card = $("risk-detail");
-    card.hidden = false;
-    card.replaceChildren(el("h2", { text: `IP ${ip}` }), el("div", { class: "empty", text: "Загрузка…" }));
-    renderIps();
-    guard("detail", fetchDetail, d => { state.detail = d; renderDetail(); }, FAST_MS)
-      .then(() => card.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+    state.countersOpen = false;
+    $("risk-dialog-kicker").textContent = "";
+    $("risk-dialog-title").textContent = ip;
+    $("risk-dialog-sub").replaceChildren();
+    $("risk-dialog-body").replaceChildren(el("div", { class: "empty", text: "Загрузка…" }));
+    if (!dialog.open) dialog.showModal();
+    renderSources();
+    guard("detail", fetchDetail, d => { state.detail = d; renderDetail(); }, FAST_MS);
   }
+
   function closeDetail() {
-    const ip = state.selected;
-    state.selected = null; state.detail = null;
-    $("risk-detail").hidden = true;
-    $("risk-detail").replaceChildren();
-    renderIps();
-    const row = [...$("risk-ips").querySelectorAll("tr[data-ip]")].find(tr => tr.getAttribute("data-ip") === ip);
-    if (row) row.focus();
+    if (dialog.open) dialog.close();  // остальное — в обработчике close (он же срабатывает на Esc)
   }
+
+  dialog.addEventListener("close", () => {
+    const ip = state.selected;
+    state.selected = null; state.detail = null; state.detailMissing = false;
+    renderSources();
+    // фокус — на элемент, открывший окно (или на его перерисованную копию с тем же IP)
+    let target = state.opener && state.opener.isConnected ? state.opener : null;
+    if (!target && ip)
+      target = [...document.querySelectorAll("#tab-risk [data-ip], #risk-alerts .risk-link")]
+        .find(node => (node.getAttribute("data-ip") || node.textContent) === ip) || null;
+    state.opener = null;
+    if (target && typeof target.focus === "function") target.focus();
+  });
+  // Tab и Shift+Tab ходят по кругу внутри окна (showModal делает страницу инертной,
+  // но с последнего элемента фокус иначе уходит в интерфейс браузера)
+  dialog.addEventListener("keydown", e => {
+    if (e.key !== "Tab") return;
+    const focusable = [...dialog.querySelectorAll('button, summary, a[href], [tabindex]:not([tabindex="-1"])')]
+      .filter(node => node.offsetParent !== null || node === document.activeElement);
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
+      e.preventDefault(); first.focus();
+    }
+  });
+  $("risk-dialog-close").addEventListener("click", closeDetail);
+  dialog.addEventListener("click", e => { if (e.target === dialog) closeDetail(); });  // клик по фону
   const fetchDetail = () => api("/api/risk/ip", { ip: state.selected });
 
-  function breakdown(d) {
-    const reasons = d.reasons || [];
-    const sum = reasons.reduce((a, r) => a + r.points, 0);
-    const cap = 100, domain = Math.max(cap, sum);
-    const pct = v => (v / domain * 100) + "%";
-    const bar = el("div", { class: "risk-breakdown", role: "img",
-      "aria-label": `разбор балла: ${reasons.map(r => `${SIGNALS[r.name] || r.name} +${r.points}`).join(", ") || "причин нет"}` });
-    let acc = 0;
-    reasons.forEach((r, i) => {
-      const color = SEG_COLORS[i % SEG_COLORS.length], label = `${SIGNALS[r.name] || r.name} +${r.points}`;
-      const inside = Math.max(0, Math.min(r.points, cap - acc)), over = r.points - inside;
-      if (inside > 0) bar.append(el("div", { class: "risk-seg", title: `${label}: ${r.detail}`,
-        style: { left: pct(acc), width: pct(inside), background: color }, text: label }));
-      if (over > 0) bar.append(el("div", { class: "risk-seg risk-over", title: `${label}: сверх максимума 100`,
-        style: { left: pct(acc + inside), width: pct(over), background: color }, text: inside > 0 ? "" : label }));
-      acc += r.points;
-    });
-    const marks = [[30, "30 · средний"], [60, "60 · высокий"]];
-    if (domain > cap) marks.push([cap, "100 · максимум"]);
-    const scale = el("div", { class: "risk-scale" }, bar,
-      marks.map(([v, t]) => el("div", { class: "risk-mark", style: { left: pct(v) } }, el("span", { text: t }))));
-    const summary = el("div", { class: "details", text: sum === d.score
-      ? `Сумма причин: ${sum} = балл ${d.score}`
-      : `Сумма причин: ${sum}, балл ограничен максимумом: ${d.score}` });
+  function defenseText(d) {
+    const f = d.defense_facts || {};
+    const parts = [];
+    if (f.numbers_blocked) {
+      const masks = (f.blocked_numbers || []).join(", ");
+      const more = f.numbers_blocked > (f.blocked_numbers || []).length ? ", …" : "";
+      parts.push(f.numbers_blocked === 1
+        ? `Номер ${masks} заблокирован после ${f.fails_to_block} неверных кодов`
+        : `Номеров заблокировано: ${num(f.numbers_blocked)}${masks ? ` (${masks}${more})` : ""}, каждый — после ${f.fails_to_block} неверных кодов`);
+    }
+    if (f.locked_attempts) parts.push(`отклонено ${num(f.locked_attempts)} ${plural(f.locked_attempts, "попытка", "попытки", "попыток")} к заблокированному номеру`);
+    if (f.ip_limited) parts.push(`лимит проверок сработал ${num(f.ip_limited)} ${plural(f.ip_limited, "раз", "раза", "раз")}`);
+    if (f.send_rejected) parts.push(`лимит отправок отклонил ${num(f.send_rejected)} ${plural(f.send_rejected, "запрос", "запроса", "запросов")}`);
+    if (parts.length) return { text: capital(parts.join(" · ")) + ".", acted: true };
+    if (d.incident_type === "sms_pumping")
+      return { text: "Базовая защита не сработала: лимит отправок считается по номеру, а бот каждый раз берёт новый.", acted: false };
+    if (d.incident_type && d.incident_type !== "none")
+      return { text: "Базовая защита не сработала: лимиты сервиса не были превышены.", acted: false };
+    return { text: "Базовая защита не вмешивалась — поводов не было.", acted: false };
+  }
+
+  function moduleText(d) {
+    if (d.level === "low") return "Риск низкий. В боевом режиме: обычный режим, вмешательство не требуется.";
+    let found;
+    if (d.incident_type === "sms_pumping" && d.first_high) found = `Обнаружил атаку на ${d.first_high.at_number}-м номере.`;
+    else {
+      const moment = d.first_high || d.detected;
+      found = moment
+        ? `Обнаружил ${d.level === "high" ? "атаку" : "подозрительную активность"} через ${num(Math.round(moment.after_seconds))} с.`
+        : "Обнаружил подозрительную активность.";
+    }
+    let action = d.level === "high" ? " В боевом режиме: блокировка всех запросов с этого IP."
+      : " В боевом режиме: замедление запросов с этого IP.";
+    if (d.savings && d.savings.sms)
+      action += ` Можно было сэкономить ≈${num(d.savings.cost)} ${d.savings.currency} (${num(d.savings.sms)} SMS).`;
+    return found + action;
+  }
+
+  function keyFigures(d) {
+    const st = d.stats || {}, f = d.defense_facts || {};
+    const tile = (value, label) => el("div", { class: "tile" },
+      el("div", { class: "value", text: value }), el("div", { class: "label", text: label }));
+    const spent = `≈${num(d.sms_cost)} ${d.currency}`;
+    const sets = {
+      sms_pumping: [[st.sms_sent, `${plural(st.sms_sent, "номер", "номера", "номеров")} — по одной SMS`, true],
+                    [st.verify_ok, `подтверждено из ${num(st.sms_sent)}`, true], [spent, "потрачено на SMS", true]],
+      code_bruteforce: [[st.verify_fail, plural(st.verify_fail, "неверный код", "неверных кода", "неверных кодов")],
+                        [f.locked_attempts, plural(f.locked_attempts, "попытка после блокировки", "попытки после блокировки", "попыток после блокировки")],
+                        [f.ip_limited, plural(f.ip_limited, "срабатывание лимита", "срабатывания лимита", "срабатываний лимита")]],
+      distributed_bruteforce: [[st.numbers, plural(st.numbers, "номер", "номера", "номеров")],
+                               [st.verify_fail, plural(st.verify_fail, "неверный код", "неверных кода", "неверных кодов")],
+                               [f.ip_limited, plural(f.ip_limited, "срабатывание лимита", "срабатывания лимита", "срабатываний лимита")]],
+    };
+    const chosen = sets[d.incident_type] || [[st.numbers, plural(st.numbers, "номер", "номера", "номеров")],
+                                             [st.sms_sent, "SMS"], [st.verify_ok, "подтверждено"]];
+    const tiles = chosen.filter(([value, , key]) => key || value)
+      .map(([value, label]) => tile(typeof value === "number" ? num(value) : value, label));
+    return tiles.length ? el("div", { class: "tiles" }, tiles) : null;
+  }
+
+  function whyBlock(d) {
+    const reasons = (d.reasons || []).slice().sort((a, b) => b.points - a.points);
+    const bar = el("div", { class: `risk-scorebar ${lvl(d.level).badge}`, role: "img",
+      "aria-label": `${riskText(d.score)}, уровень ${lvl(d.level).name}` },
+      el("i", { style: { width: `${Math.min(100, d.score)}%` } }));
+    const ticks = el("div", { class: "risk-scoreticks", "aria-hidden": "true" },
+      el("span", { style: { left: "30%" }, text: "30 — средний" }),
+      el("span", { style: { left: "60%" }, text: "60 — критический" }));
     const list = reasons.length
-      ? el("ul", { class: "risk-reasons" }, reasons.map((r, i) => el("li", null,
-          el("i", { style: { background: SEG_COLORS[i % SEG_COLORS.length] } }),
-          el("b", { text: `${SIGNALS[r.name] || r.name} +${r.points}` }),
-          el("span", { text: r.detail }))))
-      : empty("Причин нет — балл 0");
-    return [scale, summary, list];
+      ? el("div", { class: "risk-weights" }, reasons.map(r => [
+          el("span", { text: signalTitle(r) }), el("span", { class: "mono", text: `+${r.points}` }),
+          el("span", { class: "risk-why-detail", text: r.detail })]).flat())
+      : empty("Признаков риска нет");
+    return [bar, ticks, list];
+  }
+
+  function timelineTable(d) {
+    const groups = d.timeline_groups || [];
+    if (!groups.length) return empty("Событий за 10 минут нет");
+    const span = g => hms(g.first_ts) === hms(g.last_ts) ? hms(g.first_ts) : `${hms(g.first_ts)}–${hms(g.last_ts)}`;
+    const number = g => g.msisdn ? g.msisdn
+      : g.numbers > 1 ? `${num(g.numbers)} номеров: ${g.msisdn_first} … ${g.msisdn_last}` : "—";
+    const row = g => {
+      const [name, result] = TIMELINE_EVENTS[g.event] || [EVENTS[g.event] || g.event, ""];
+      const tags = [g.new_ip ? "вход с нового IP" : null, g.scope === "cabinet" ? "кабинет абонента" : g.scope]
+        .filter(Boolean).map(t => el("span", { class: "risk-tag", text: t }));
+      return el("tr", null, el("td", { class: "mono", text: span(g) }),
+        el("td", { class: "risk-wrap" }, g.count > 1 ? `${name} ×${num(g.count)}` : name, tags),
+        el("td", { class: "mono risk-wrap", text: number(g) }),
+        el("td", { class: "risk-result" }, result,
+          g.status != null ? el("span", { class: "mono", text: String(g.status) }) : null));
+    };
+    const rows = groups.map(row);
+    if (d.timeline_skipped) {
+      rows.splice(4, 0, el("tr", { class: "risk-skip" }, el("td", { colspan: 4,
+        text: `… ещё ${num(d.timeline_skipped)} ${plural(d.timeline_skipped, "группа", "группы", "групп")} событий` })));
+    }
+    return el("div", { class: "scroll" }, el("table", { class: "risk-timeline" },
+      el("thead", null, el("tr", null, ["Время", "Событие", "Номер", "Результат"].map(t => el("th", { text: t })))),
+      el("tbody", null, rows)));
+  }
+
+  function countersBlock(d) {
+    const st = d.stats || {};
+    const items = [["номеров", st.numbers], ["SMS отправлено", st.sms_sent], ["SMS отклонено", st.sms_rejected],
+      ["подтверждено", st.verify_ok], ["неверных кодов", st.verify_fail], ["истекло", st.verify_expired],
+      ["к заблокированному номеру", st.verify_locked], ["лимит проверок", st.ip_limited]];
+    const details = el("details", { class: "risk-counters" },
+      el("summary", { text: "Все счётчики" }),
+      el("dl", null, items.map(([label, value]) => [
+        el("dt", { class: value ? null : "risk-zero", text: label }),
+        el("dd", { class: value ? null : "risk-zero", text: num(value) })]).flat(),
+        el("dt", { text: "потрачено на SMS" }), el("dd", { text: `${num(d.sms_cost)} ${d.currency}` })),
+      el("div", { class: "details", text: `первое появление: ${dt(d.first_seen)} · последнее: ${dt(d.last_seen)}` }));
+    details.open = !!state.countersOpen;
+    details.addEventListener("toggle", () => { state.countersOpen = details.open; });
+    return details;
   }
 
   function renderDetail() {
-    const card = $("risk-detail");
-    if (!state.selected) { card.hidden = true; return; }
-    const close = el("button", { type: "button", text: "Закрыть ✕", onclick: closeDetail,
-      "aria-label": "Закрыть карточку IP (Escape)" });
-    if (state.detailMissing) {
-      card.replaceChildren(el("h2", null, `IP ${state.selected}`, el("span", { class: "spacer" }), close),
-        empty("IP больше не отслеживается (нет активности больше часа)"));
+    if (!state.selected || !dialog.open) return;
+    const d = state.detail;
+    const body = $("risk-dialog-body");
+    if (!d) {
+      if (state.detailMissing)
+        body.replaceChildren(empty("Данных по этому IP больше нет: активности не было больше часа."));
       return;
     }
-    const d = state.detail;
-    if (!d) return;
-    const head = el("h2", null, el("span", { class: "mono risk-ip", text: d.ip }), levelBadge(d.level),
-      el("span", { text: `балл ${d.score}` }),
-      d.current_score < d.score ? el("span", { class: "risk-now", text: `сейчас ${d.current_score}` }) : null,
-      el("span", { class: "spacer" }), close);
-    const meta = el("div", { class: "risk-detail-head details" },
-      el("span", null, "В бою: ", el("strong", { text: d.would_action_text })),
-      el("span", { text: `впервые: ${dt(d.first_seen)}` }),
-      el("span", { text: `последний раз: ${dt(d.last_seen)}` }));
-    const st = d.stats || {};
-    const stat = (label, value) => el("div", { class: "risk-stat" }, el("b", { text: value }), el("span", { text: label }));
-    const stats = el("div", { class: "risk-stats" },
-      stat("номеров", num(st.numbers)), stat("SMS отправлено", num(st.sms_sent)),
-      stat("SMS отклонено", num(st.sms_rejected)), stat("подтверждено", num(st.verify_ok)),
-      stat("неверных кодов", num(st.verify_fail)), stat("истекло", num(st.verify_expired)),
-      stat("к заблокированному", num(st.verify_locked)), stat("лимит по IP", num(st.ip_limited)),
-      stat("стоимость SMS", `${num(d.sms_cost)} ${d.currency}`));
-    const allEvents = d.events || [], events = allEvents.slice(0, DETAIL_EVENTS);
-    const table = events.length ? el("div", { class: "scroll" }, el("table", null,
-      el("thead", null, el("tr", null, ["Время", "Событие", "Номер", "Статус", "Причина"].map(t => el("th", { text: t })))),
-      el("tbody", null, events.map(ev => el("tr", null,
-        el("td", { text: hms(ev.ts) }),
-        el("td", null, EVENTS[ev.event] || ev.event,
-          ev.new_ip ? el("span", { class: "risk-tag", text: "новый IP" }) : null,
-          ev.scope ? el("span", { class: "risk-tag", text: ev.scope }) : null),
-        el("td", { class: "mono", text: ev.msisdn || "—" }),
-        el("td", { class: "num", text: ev.status == null ? "—" : ev.status }),
-        el("td", { class: "details", text: ev.reason || "—" }))))),
-      allEvents.length > events.length
-        ? el("div", { class: "details", text: `показаны ${events.length} последних из ${allEvents.length}` }) : null)
-      : empty("Событий за 10 минут нет");
-    card.replaceChildren(head, meta, el("h2", { text: "Почему такой балл" }), ...breakdown(d),
-      stats, el("h2", { text: "Последние события IP (10 минут)" }), table,
-      el("div", { class: "details err risk-status", id: "risk-st-detail" }));
+    const attack = d.incident_type && d.incident_type !== "none";
+    $("risk-dialog-kicker").textContent = attack ? "Детали атаки" : "Источник запросов";
+    $("risk-dialog-title").textContent = attack ? `${d.ip} · ${d.incident_title}` : d.ip;
+    const score = el("span", { class: `badge ${lvl(d.level).badge}`, text: `${lvl(d.level).name} · ${riskText(d.score)}` });
+    if (d.weights_sum > 100) score.title = `сумма признаков ${d.weights_sum}, шкала ограничена 100`;
+    $("risk-dialog-sub").replaceChildren(...[score,
+      el("span", { text: `Активность: ${hms(d.first_seen)} – ${hms(d.last_seen)} по Бишкеку` }),
+      d.current_score < d.score ? el("span", { class: "risk-quiet", text: quietText(d) }) : null,
+      state.detailMissing ? el("span", { class: "risk-stale", text: "данные устарели" }) : null].filter(Boolean));
+
+    const defense = defenseText(d);
+    const verdict = [
+      el("div", { class: `risk-verdict-block ${defense.acted ? "s-info" : "risk-neutral"}` },
+        el("div", { class: "risk-verdict-label", text: "Что уже сделала защита сервиса" }),
+        el("div", { text: defense.text })),
+      el("div", { class: `risk-verdict-block ${lvl(d.level).badge}` },
+        el("div", { class: "risk-verdict-label", text: "Модуль рисков (режим наблюдения)" }),
+        el("div", { text: moduleText(d) })),
+    ];
+    const scroll = body.scrollTop;
+    body.replaceChildren(...[...verdict, keyFigures(d),
+      el("h3", { text: "Почему такой риск" }), ...whyBlock(d),
+      el("h3", { text: "Хронология" }), timelineTable(d),
+      countersBlock(d), el("div", { class: "details err risk-status", id: "risk-st-detail" })].filter(Boolean));
+    body.scrollTop = scroll;  // опрос не сбивает прокрутку
   }
 
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && state.selected && state.tab === "risk") closeDetail();
-  });
-
-  // ---------- 7. Лента тревог и счётчик на кнопке ----------
+  // ---------- 7. Журнал срабатываний защиты и счётчик на кнопке ----------
   function mergeAlerts(list) {
     const fresh = (list || []).filter(a => a.id > state.lastAlertId);
     if (!fresh.length) return 0;
@@ -1161,22 +1413,31 @@
     if (countOnly) { if (added) state.alertsDirty = true; return; }
     if (added || state.alertsDirty || $("risk-alerts").dataset.rendered !== "1") renderAlerts();
   }
+  function alertDetail(a) {
+    const top = (a.reasons || []).slice().sort((x, y) => y.points - x.points).slice(0, 2);
+    return top.length ? capital(top.map(r => r.detail).join(", ")) + "." : "";
+  }
+
   function renderAlerts() {
     const box = $("risk-alerts");
     box.dataset.rendered = "1";
     state.alertsDirty = false;
     const now = Date.now();
     for (const [id, at] of state.fresh) if (now - at > FLASH_MS) state.fresh.delete(id);
-    if (!state.alerts.length) { box.replaceChildren(empty("Тревог пока нет")); return; }
+    if (!state.alerts.length) { box.replaceChildren(empty("Срабатываний пока нет")); return; }
     box.replaceChildren(...state.alerts.map(a => el("div", {
         class: `risk-alert ${lvl(a.severity).badge}${state.fresh.has(a.id) ? " risk-new" : ""}` },
       el("div", { class: "risk-alert-head" },
-        levelBadge(a.severity), el("span", { text: hms(a.ts) }),
+        el("span", { class: `badge ${lvl(a.severity).badge}`, text: lvl(a.severity).name }), " ",
+        `${hms(a.ts)} · `,
         el("button", { type: "button", class: "risk-link mono", text: a.ip, onclick: () => openDetail(a.ip),
-          title: "Открыть карточку IP" }),
-        el("span", { text: `балл ${a.score}` }), el("span", { class: "details", text: `#${a.id}` })),
-      el("div", { text: a.message }))));
+          title: "Открыть разбор риска" }),
+        ` · ${a.incident_title || "Подозрительная активность"} · ${riskText(a.score)}`),
+      el("div", { class: "risk-alert-body", text: alertDetail(a) }),
+      ACTION_FULL[a.severity]
+        ? el("div", { class: "risk-alert-action", text: `В боевом режиме: ${ACTION_FULL[a.severity]}.` }) : null)));
   }
+
   function renderCount() {
     const badge = $("risk-count");
     badge.textContent = state.unseen > 99 ? "99+" : String(state.unseen);
@@ -1191,11 +1452,10 @@
     $("risk-mode").hidden = m.observe_only !== true;
     const items = [
       `принято событий: ${num(m.ingested)}`, `отброшено: ${num(m.dropped)}`, `ошибок: ${num(m.errors)}`,
-      `режим: ${m.mode}`, `очередь: ${num(m.queue_size)}`, `окно признаков: ${Math.round(m.window / 60)} мин`,
+      `режим доставки: ${m.mode}`, `очередь: ${num(m.queue_size)}`, `окно признаков: ${Math.round(m.window / 60)} мин`,
     ].map(text => el("span", { text }));
-    if ((m.dropped || 0) > 0 || (m.errors || 0) > 0)
-      items.unshift(el("span", { class: "badge s-warning", text: "есть потери или ошибки модуля" }));
     $("risk-footer").replaceChildren(...items);
+    $("risk-tech-warn").hidden = !((m.dropped || 0) > 0 || (m.errors || 0) > 0);
   }
 
   // ---------- опрос ----------
@@ -1209,9 +1469,9 @@
       await Promise.all([
         guard("overview", () => api("/api/risk/overview", { window: 3600 }),
           d => { state.overview = d; state.now = d.now; renderTiles(); }, FAST_MS),
-        guard("ips", fetchIps, d => { state.ips = d; renderIps(); }, FAST_MS),
+        guard("ips", fetchIps, d => { state.ips = d; renderSources(); }, FAST_MS),
         guard("alerts", () => fetchAlerts(false), () => {}, FAST_MS),
-        state.selected ? guard("detail", fetchDetail, d => {
+        state.selected && dialog.open ? guard("detail", fetchDetail, d => {
           state.detail = d; state.detailMissing = false; renderDetail(); }, FAST_MS) : null,
       ]);
     } finally { state.busyFast = false; }

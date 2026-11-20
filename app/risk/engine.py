@@ -19,7 +19,8 @@ from .config import RiskSettings
 from .schema import RiskEvent, normalize
 from .summary import SummaryService, incident_type, make_node_id
 from .signals import (
-    ACTIONS, LEVEL_RANK, LEVELS, SIGNAL_INFO, Signal, WindowStats, evaluate, level_of, score_of,
+    ACTION_TITLES, ACTIONS, LEVEL_RANK, LEVEL_TITLES, LEVELS, SIGNAL_INFO, SIGNAL_TITLES, Signal,
+    WindowStats, evaluate, incident_fields, level_of, score_of,
 )
 
 SEND_KINDS = frozenset({"send_ok", "send_rejected"})
@@ -32,6 +33,9 @@ TIMELINE_KINDS = ("send_ok", "send_rejected", "verify_ok", "verify_fail", "verif
 # Сколько хранить неактивный IP: дольше окна признаков, чтобы топ IP и разбор жили час
 IP_RETENTION = 3600
 SPARKLINE_MINUTES = 10
+TIMELINE_HEAD = TIMELINE_TAIL = 4  # хронология: первые и последние группы событий
+BLOCKED_NUMBERS_SHOWN = 3
+SERVICE_FAILS_TO_BLOCK = 5  # ТЗ: номер блокируется после 5 неверных кодов (только для подписи)
 _STOP = object()  # сигнал остановки обработчика очереди
 
 
@@ -75,6 +79,7 @@ class _IpState:
     episode_start: float = 0.0
     episode_sends: int = 0  # send_ok за эпизод
     first_high: Optional[dict] = None  # {"ts", "after_seconds", "at_number"} — первая тревога high
+    detected: Optional[dict] = None  # то же для первого выхода за «Низкий» (medium или high)
 
 
 def _round_ts(ts: float) -> float:
@@ -205,6 +210,7 @@ class RiskEngine:
                 self._ips[ev.ip] = state
             elif ev.ts - state.last_seen >= s.window:
                 state.episode_start, state.episode_sends, state.first_high = ev.ts, 0, None
+                state.detected = None
             if ev.kind == "send_ok":
                 state.episode_sends += 1
 
@@ -224,10 +230,13 @@ class RiskEngine:
             state.level_seen[assessment.level] = now
             if LEVEL_RANK[assessment.level] > LEVEL_RANK[previous]:
                 self._raise_alert(assessment)
+            moment = {"ts": _round_ts(ev.ts),
+                      "after_seconds": round(ev.ts - state.episode_start, 1),
+                      "at_number": state.episode_sends}
+            if assessment.level != "low" and state.detected is None:
+                state.detected = dict(moment, level=assessment.level)
             if assessment.level == "high" and state.first_high is None:
-                state.first_high = {"ts": _round_ts(ev.ts),
-                                    "after_seconds": round(ev.ts - state.episode_start, 1),
-                                    "at_number": state.episode_sends}
+                state.first_high = moment
 
             minute = self._minutes.setdefault(int(ev.ts // 60) * 60, Counter())
             minute[ev.kind] += 1
@@ -277,6 +286,7 @@ class RiskEngine:
         self._alert_seq += 1
         details = "; ".join(reason.detail for reason in a.reasons) or "балл вырос"
         self._alerts.append({
+            **incident_fields([r.name for r in a.reasons], a.level),
             "id": self._alert_seq,
             "ts": _round_ts(a.ts),
             "ip": a.ip,
@@ -396,9 +406,25 @@ class RiskEngine:
             "verify_attempts": a.stats.verify_attempts,
             "last_seen": _round_ts(state.last_seen),
             "current_score": self._assess_events(state.last.ip, state.events, now).score,
+            **self._incident_extras(state),
             "sparkline": self._sparkline(state, now),
         })
         return row
+
+    def _incident_extras(self, state: _IpState) -> dict:
+        """Тип атаки, моменты обнаружения и (для SMS-флуда) возможная экономия — для людей."""
+        a = state.last
+        fields = incident_fields([r.name for r in a.reasons], a.level)
+        savings = None
+        if fields["incident_type"] == "sms_pumping" and state.first_high:
+            sms = max(0, a.stats.sends_ok - state.first_high["at_number"])
+            savings = {"sms": sms, "cost": round(sms * self.settings.sms_price, 2),
+                       "currency": self.settings.currency}
+        return {**fields, "level_title": LEVEL_TITLES[a.level],
+                "would_action_title": ACTION_TITLES[a.level],
+                "first_high": dict(state.first_high) if state.first_high else None,
+                "detected": dict(state.detected) if state.detected else None,
+                "savings": savings}
 
     @staticmethod
     def _sparkline(state: _IpState, now: float) -> list[int]:
@@ -423,7 +449,7 @@ class RiskEngine:
             detail = a.to_dict()
             detail.update({
                 "current_score": self._assess_events(ip, state.events, now).score,
-                "first_high": dict(state.first_high) if state.first_high else None,
+                **self._incident_extras(state),
                 "first_seen": _round_ts(state.first_seen),
                 "last_seen": _round_ts(state.last_seen),
                 "stats": {
@@ -445,6 +471,9 @@ class RiskEngine:
                      "new_ip": flag}
                     for ev, flag in reversed(events)
                 ],
+                **timeline_groups(list(state.events)),
+                "defense_facts": defense_facts(list(state.events)),
+                "weights_sum": sum(r.points for r in a.reasons),
             })
             return detail
 
@@ -524,6 +553,7 @@ class RiskEngine:
                 if sends and "sequential" in names:
                     number_range = {"first": sends[0][1], "last": sends[-1][1]}
                 result.append({
+                    **incident_fields(names, a.level),
                     "ip": a.ip,
                     "type": incident_type(names),
                     "score": a.score,
@@ -537,7 +567,10 @@ class RiskEngine:
                     "first_seen": _round_ts(st.episode_start),
                     "last_seen": _round_ts(st.last_seen),
                     "first_high": dict(st.first_high) if st.first_high else None,
+                    "detected": dict(st.detected) if st.detected else None,
                     "would_action": a.would_action,
+                    "would_action_title": ACTION_TITLES[a.level],
+                    "savings": self._incident_extras(st)["savings"],
                     "would_action_text": a.would_action_text,
                 })
         return result
@@ -591,10 +624,85 @@ class RiskEngine:
             "tz_offset_hours": s.tz_offset_hours,
             "levels": {"medium_at": s.medium_at, "high_at": s.high_at, "max_score": s.max_score},
             "actions": {level: {"action": a, "text": t} for level, (a, t) in ACTIONS.items()},
-            "signals": [{"name": name, "points": points[name], "description": text}
-                        for name, text in SIGNAL_INFO],
+            "signals": [{"name": name, "title": SIGNAL_TITLES[name], "points": points[name],
+                         "description": text} for name, text in SIGNAL_INFO],
+            "level_titles": dict(LEVEL_TITLES),
+            "action_titles": dict(ACTION_TITLES),
             "sms_price": s.sms_price,
             "currency": s.currency,
-            "llm_enabled": bool(s.llm_api_key),
+            "llm_enabled": self._summary.chain.enabled,
+            "llm": self._summary.meta(),
             **counters,
         }
+
+
+# ---------- хронология и факты базовой защиты для окна «Почему такой риск?» ----------
+
+def timeline_groups(events: list) -> dict:
+    """Все события IP в окне — группами, по времени сверху вниз.
+
+    Подряд идущие события с одинаковыми event и status сливаются; если номера разные (бот берёт
+    каждый раз новый), группа хранит число номеров и первую/последнюю маску, а msisdn = None.
+    «Неверный код» и следующая в ту же секунду блокировка этого же номера — одна группа
+    verify_fail_blocked. Отдаются первые 4 и последние 4 группы.
+    """
+    groups: list[dict] = []
+    seen: list[set] = []  # номера каждой группы
+
+    def new_group(ev, flag) -> None:
+        groups.append({"first_ts": _round_ts(ev.ts), "last_ts": _round_ts(ev.ts), "event": ev.kind,
+                       "status": ev.status, "msisdn": ev.msisdn_masked, "count": 1, "numbers": 0,
+                       "msisdn_first": ev.msisdn_masked, "msisdn_last": ev.msisdn_masked,
+                       "new_ip": flag, "scope": ev.scope})
+        seen.append(set())
+
+    def add_number(index: int, mask) -> None:
+        if mask:
+            seen[index].add(mask)
+            group = groups[index]
+            group["numbers"] = len(seen[index])
+            group["msisdn_first"] = group["msisdn_first"] or mask
+            group["msisdn_last"] = mask
+            group["msisdn"] = group["msisdn_first"] if len(seen[index]) == 1 else None
+
+    for ev, flag in events:
+        last = groups[-1] if groups else None
+        if (ev.kind == "number_blocked" and last is not None and last["event"] == "verify_fail"
+                and last["numbers"] == 1 and last["msisdn"] == ev.msisdn_masked
+                and ev.ts - last["last_ts"] <= 1):
+            if last["count"] > 1:  # последняя ошибка «уходит» в группу блокировки
+                last["count"] -= 1
+                groups.append(dict(last, first_ts=last["last_ts"], count=1))
+                seen.append(set(seen[-1]))
+                last = groups[-1]
+            last.update(event="verify_fail_blocked", status=ev.status, last_ts=_round_ts(ev.ts))
+            continue
+        if last is not None and last["event"] == ev.kind and last["status"] == ev.status:
+            last["count"] += 1
+            last["last_ts"] = _round_ts(ev.ts)
+            last["new_ip"] = last["new_ip"] or flag
+        else:
+            new_group(ev, flag)
+        add_number(len(groups) - 1, ev.msisdn_masked)
+    limit = TIMELINE_HEAD + TIMELINE_TAIL
+    if len(groups) <= limit:
+        return {"timeline_groups": groups, "timeline_skipped": 0}
+    return {"timeline_groups": groups[:TIMELINE_HEAD] + groups[-TIMELINE_TAIL:],
+            "timeline_skipped": len(groups) - limit}
+
+
+def defense_facts(events: list) -> dict:
+    """Что реально сделала базовая защита сервиса (ТЗ) с запросами этого IP за окно."""
+    blocked: list[str] = []
+    counts = Counter(ev.kind for ev, _ in events)
+    for ev, _ in events:
+        if ev.kind == "number_blocked" and ev.msisdn_masked and ev.msisdn_masked not in blocked:
+            blocked.append(ev.msisdn_masked)
+    return {
+        "numbers_blocked": len(blocked) or counts["number_blocked"],
+        "locked_attempts": counts["verify_locked"],
+        "ip_limited": counts["ip_rate_limited"],
+        "send_rejected": counts["send_rejected"],
+        "blocked_numbers": blocked[:BLOCKED_NUMBERS_SHOWN],
+        "fails_to_block": SERVICE_FAILS_TO_BLOCK,
+    }

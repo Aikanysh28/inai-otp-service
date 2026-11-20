@@ -96,7 +96,7 @@ class SummaryTemplateTest(unittest.TestCase):
                                  "distributed": self.ips["distributed"],
                                  "bruteforce": self.ips["bruteforce"]})
         text = summary["text"]
-        for phrase in ("SMS pumping", "распределённый подбор", "подбор кода к номеру",
+        for phrase in ("SMS-флуд", "распределённый подбор кодов", "подбор кода к номеру",
                        "сом", "на 6-м номере", "в боевом режиме", "Рекомендации"):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase.lower(), text.lower())
@@ -116,7 +116,7 @@ class SummaryTemplateTest(unittest.TestCase):
         engine = engine_with()
         summary = engine.summary()
         self.assertEqual(summary["incidents"], [])
-        self.assertIn("Инцидентов", summary["text"])
+        self.assertIn("инцидентов не обнаружено", summary["text"])
 
 
 class _FakeResponse:
@@ -133,8 +133,10 @@ class _FakeResponse:
         return False
 
 
-LLM_OK = {"content": [{"type": "thinking", "thinking": ""},
-                      {"type": "text", "text": "Идёт SMS pumping с 45.13.7.200."}],
+LLM_TEXT = ("Идёт SMS pumping с IP-1: коды запрошены на 12 номеров подряд, отправлено 12 SMS, "
+            "потери 12 сом. Тревога высокого уровня поднялась на 6-м номере; в боевом режиме "
+            "источник получил бы блокировку.")
+LLM_OK = {"content": [{"type": "thinking", "thinking": ""}, {"type": "text", "text": LLM_TEXT}],
           "stop_reason": "end_turn"}
 
 
@@ -181,7 +183,8 @@ class SummaryLlmTest(unittest.TestCase):
         opener = mock.Mock(return_value=_FakeResponse(LLM_OK))
         engine, _ = self.make(opener, llm_api_key="secret-key", llm_model="claude-haiku-5-5")
         summary = engine.summary()
-        self.assertEqual((summary["source"], summary["text"]), ("llm", "Идёт SMS pumping с 45.13.7.200."))
+        self.assertEqual((summary["source"], summary["text"]),
+                         ("llm", LLM_TEXT.replace("IP-1", "45.13.7.200")))
         request = opener.call_args.args[0]
         self.assertEqual(request.full_url, "https://api.anthropic.com/v1/messages")
         self.assertEqual(request.get_header("X-api-key"), "secret-key")
@@ -333,7 +336,7 @@ class DashboardSprint4Test(unittest.TestCase):
 
     def test_no_local_storage_and_russian_levels(self):
         self.assertNotIn("localStorage", self.js)
-        for name in ("Низкий", "Средний", "Высокий"):
+        for name in ("Низкий", "Средний", "Критический"):
             self.assertIn(name, self.js)
         self.assertNotIn(".innerHTML", self.js)
 
