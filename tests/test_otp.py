@@ -437,6 +437,49 @@ def test_security_logs_are_isolated(tmp_path):
     assert "verify_failed" in b and "otp_issued" not in b
 
 
+# ---------- IP из соединения (как у жюри: клиенты с 127.0.0.1 и 127.0.0.2) ----------
+
+def post_from(client, source_ip: str, path: str, body: dict) -> int:
+    """POST с заданного локального адреса: сервер видит его как IP клиента."""
+    host, port = client.base.removeprefix("http://").split(":")
+    conn = http.client.HTTPConnection(host, int(port), timeout=5, source_address=(source_ip, 0))
+    try:
+        conn.request("POST", path, json.dumps(body), {"Content-Type": "application/json"})
+        response = conn.getresponse()
+        response.read()
+        return response.status
+    finally:
+        conn.close()
+
+
+@pytest.fixture
+def second_loopback():
+    """127.0.0.2 есть на Linux и Windows; на macOS без настройки — тест пропускается."""
+    import socket
+    probe = socket.socket()
+    try:
+        probe.bind(("127.0.0.2", 0))
+    except OSError:
+        pytest.skip("адрес 127.0.0.2 недоступен в этой системе")
+    finally:
+        probe.close()
+
+
+def test_ip_limit_is_per_connection_address(env, second_loopback):
+    client, *_ = env
+    body = {"msisdn": MSISDN, "code": "000000"}
+    for _ in range(20):
+        assert post_from(client, "127.0.0.1", "/otp/verify", body) == 401
+    assert post_from(client, "127.0.0.1", "/otp/verify", body) == 429
+    assert post_from(client, "127.0.0.2", "/otp/verify", body) == 401  # у второго IP своя квота
+
+
+def test_events_record_connection_address(env, second_loopback):
+    client, _, service, _ = env
+    post_from(client, "127.0.0.2", "/otp/send", {"msisdn": MSISDN})
+    assert service.history(MSISDN)[0]["ip"] == "127.0.0.2"
+
+
 # ---------- доверенный прокси ----------
 
 @pytest.mark.parametrize("peer, xff, expected", [
