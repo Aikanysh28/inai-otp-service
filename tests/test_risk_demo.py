@@ -285,9 +285,11 @@ class AttackScriptTest(unittest.TestCase):
         settings = Settings(secret_key=b"test-secret", log_dir=tmp, dashboard_token="t",
                             outbox_path=os.path.join(tmp, "sms.jsonl"),
                             trusted_proxies=frozenset({"127.0.0.1"}))
-        log = SecurityLog(tmp, console=False)
-        service = OTPService(settings, log, store=MemoryStore(),
-                             sms=SmsGateway(settings.outbox_path, echo=False))
+        # Дневной сценарий: ночью дополнительные баллы меняют момент тревоги.
+        clock = FakeClock()
+        log = SecurityLog(tmp, clock=clock, console=False)
+        service = OTPService(settings, log, clock=clock, store=MemoryStore(clock),
+                             sms=SmsGateway(settings.outbox_path, clock=clock, echo=False))
         with mock.patch.dict(os.environ, {"RISK_ENABLED": "1"}):
             server = create_server(settings, service, host="127.0.0.1", port=0)
         threading.Thread(target=server.serve_forever, daemon=True).start()
