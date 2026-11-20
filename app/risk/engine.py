@@ -93,7 +93,9 @@ def _default_id_key() -> bytes:
 
 class RiskEngine:
     def __init__(self, settings: Optional[RiskSettings] = None, *,
-                 clock: Callable[[], float] = time.time, id_key: Optional[bytes] = None):
+                 clock: Callable[[], float] = time.time, id_key: Optional[bytes] = None,
+                 on_alert: Optional[Callable[[Assessment], None]] = None):
+        self._on_alert = on_alert
         self.settings = settings or RiskSettings()
         self.clock = clock
         self._id_key = id_key if id_key is not None else _default_id_key()
@@ -230,6 +232,8 @@ class RiskEngine:
             state.level_seen[assessment.level] = now
             if LEVEL_RANK[assessment.level] > LEVEL_RANK[previous]:
                 self._raise_alert(assessment)
+                if self._on_alert is not None:
+                    self._on_alert(assessment)
             moment = {"ts": _round_ts(ev.ts),
                       "after_seconds": round(ev.ts - state.episode_start, 1),
                       "at_number": state.episode_sends}

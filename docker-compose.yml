@@ -17,6 +17,8 @@ services:
       redis:
         condition: service_healthy
     environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       REDIS_URL: redis://redis:6379/0
       # Ключ HMAC: задайте свой в .env или окружении (OTP_SECRET=...)
       OTP_SECRET: ${OTP_SECRET:-change-me-in-production-please}
