@@ -6,122 +6,18 @@ import http.client
 import json
 import os
 import threading
-import urllib.error
 import urllib.request
-from contextlib import contextmanager
-from typing import Iterator, Optional
 
 import pytest
 
-from app.config import Settings
 import run_scenarios
-from app.main import create_server, resolve_client_ip
-from run_scenarios import FakeClock
+from app.main import resolve_client_ip
 from app.otp_service import OTPService, VerifyStatus
 from app.security_log import SecurityEvent, SecurityLog
-from app.store import MemoryStore, RedisStore
-
-MSISDN = "996555123456"
-
-
-class Resp:
-    def __init__(self, status_code: int, body: bytes, headers):
-        self.status_code = status_code
-        self.body = body
-        self.headers = headers
-
-    @property
-    def text(self) -> str:
-        return self.body.decode()
-
-    def json(self):
-        return json.loads(self.body)
-
-
-class Client:
-    """Мини-клиент поверх urllib к реально запущенному серверу."""
-
-    def __init__(self, base: str):
-        self.base = base
-
-    def get(self, path: str, headers: Optional[dict] = None) -> Resp:
-        return self._request(urllib.request.Request(self.base + path, headers=headers or {}))
-
-    def post(self, path: str, body: Optional[dict] = None, raw: Optional[bytes] = None) -> Resp:
-        data = raw if raw is not None else json.dumps(body).encode()
-        return self._request(urllib.request.Request(self.base + path, data=data, method="POST",
-                                                    headers={"Content-Type": "application/json"}))
-
-    @staticmethod
-    def _request(req: urllib.request.Request) -> Resp:
-        try:
-            with urllib.request.urlopen(req, timeout=5) as r:
-                return Resp(r.status, r.read(), r.headers)
-        except urllib.error.HTTPError as e:
-            return Resp(e.code, e.read(), e.headers)
-
-
-@contextmanager
-def running_server(settings: Settings, service: Optional[OTPService] = None) -> Iterator[Client]:
-    """Поднять сервер на свободном порту в фоновом потоке и вернуть клиента к нему."""
-    server = create_server(settings, service, host="127.0.0.1", port=0)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    try:
-        yield Client(f"http://127.0.0.1:{server.server_address[1]}")
-    finally:
-        server.shutdown()
-        server.server_close()
-        if service is not None:
-            service.log.close()
-
-
-def make_store(kind: str, clock):
-    if kind == "memory":
-        return MemoryStore(clock)
-    fakeredis = pytest.importorskip("fakeredis")
-    return RedisStore(fakeredis.FakeRedis(server=fakeredis.FakeServer()))
-
-
-# Все сценарии прогоняются на обоих хранилищах: в памяти и в Redis.
-@pytest.fixture(params=["memory", "redis"])
-def env(request, tmp_path):
-    clock = FakeClock()
-    settings = make_settings(tmp_path)
-    service = OTPService(settings, SecurityLog(str(tmp_path), clock=clock), clock=clock,
-                         store=make_store(request.param, clock))
-    with running_server(settings, service) as client:
-        client.outbox = settings.outbox_path
-        yield client, clock, service, tmp_path
-
-
-def make_settings(tmp_path, **overrides) -> Settings:
-    return Settings(secret_key=b"test-secret", log_dir=str(tmp_path),
-                    outbox_path=str(tmp_path / "outbox" / "sms.jsonl"), **overrides)
-
-
-def delivered_code(outbox: str, msisdn: str = MSISDN) -> str:
-    """Последний код для номера из тестового SMS-транспорта (как capture_delivery у жюри)."""
-    with open(outbox, encoding="utf-8") as f:
-        records = [json.loads(line) for line in f]
-    return [r for r in records if r["msisdn"] == msisdn][-1]["code"]
-
-
-def send(client, msisdn=MSISDN):
-    return client.post("/otp/send", {"msisdn": msisdn})
-
-
-def issue(client, msisdn=MSISDN) -> str:
-    """Запросить код и «перехватить» его из outbox."""
-    assert send(client, msisdn).status_code == 200
-    return delivered_code(client.outbox, msisdn)
-
-
-def verify(client, code, msisdn=MSISDN):
-    return client.post("/otp/verify", {"msisdn": msisdn, "code": code})
-
-
-def wrong(code: str) -> str:
-    return f"{(int(code) + 1) % 1_000_000:06d}"
+from app.store import RedisStore
+from tests.helpers import (
+    MSISDN, Client, delivered_code, issue, make_settings, running_server, send, verify, wrong,
+)
 
 
 # ---------- базовые сценарии ----------
@@ -585,3 +481,28 @@ def test_scenario_runner_detects_failure(tmp_path):
     path = tmp_path / "scenarios_bad.json"
     path.write_text(json.dumps(bad), encoding="utf-8")
     assert run_scenarios.run_file(str(path)) == (0, 1)
+
+
+# ---------- демо-страница ----------
+
+def test_demo_page_served(env):
+    client, *_ = env
+    r = client.get("/demo")
+    assert r.status_code == 200 and r.headers["Content-Type"].startswith("text/html")
+
+
+def test_demo_send_disabled_by_default(env):
+    """По умолчанию код никогда не возвращается через HTTP: маршрута /demo/send нет."""
+    client, *_ = env
+    assert client.post("/demo/send", {"msisdn": MSISDN}).status_code == 404
+    assert "code" not in send(client).json()
+
+
+def test_demo_send_returns_code_only_in_demo_mode(tmp_path):
+    settings = make_settings(tmp_path, demo_show_code=True)
+    with running_server(settings) as client:
+        client.outbox = settings.outbox_path
+        r = client.post("/demo/send", {"msisdn": MSISDN})
+        assert r.status_code == 200
+        assert r.json()["code"] == delivered_code(client.outbox)
+        assert "code" not in send(client, "996555000001").json()  # обычный /otp/send — без кода

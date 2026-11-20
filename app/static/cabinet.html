@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кабинет абонента</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f4f3f0; --surface-1: #fcfcfb; --surface-2: #f0efec;
+    --border: #e2e1dc; --grid: #ecebe7;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7a7974;
+    --accent: #2a78d6; --accent-text: #ffffff;
+    --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b; --info: #2a78d6;
+    --good-text: #006300; --critical-text: #b42a2a; --frozen: #2a78d6;
+    --banner-warn: #fff4dc; --banner-frozen: #e6f0fc; --banner-critical: #fde8e8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #232321;
+      --border: #2e2e2b; --grid: #262624;
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8e8d86;
+      --accent: #3987e5; --info: #3987e5; --frozen: #3987e5;
+      --good-text: #4cc84c; --critical-text: #ee7a7a;
+      --banner-warn: #332a14; --banner-frozen: #172536; --banner-critical: #351919;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #232321;
+    --border: #2e2e2b; --grid: #262624;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8e8d86;
+    --accent: #3987e5; --info: #3987e5; --frozen: #3987e5;
+    --good-text: #4cc84c; --critical-text: #ee7a7a;
+    --banner-warn: #332a14; --banner-frozen: #172536; --banner-critical: #351919;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface-0); color: var(--text-primary);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 48px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  header .logo {
+    width: 36px; height: 36px; border-radius: 10px; background: var(--accent); color: var(--accent-text);
+    display: grid; place-items: center; font-weight: 700; flex: none;
+  }
+  h1 { font-size: 19px; margin: 0; font-weight: 650; }
+  .sub { color: var(--text-secondary); font-size: 13px; }
+  .spacer { flex: 1; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; font-weight: 600; }
+  label { display: block; font-size: 13px; color: var(--text-secondary); margin: 0 0 6px; }
+  input {
+    width: 100%; font: inherit; font-size: 18px; letter-spacing: .04em; padding: 10px 12px;
+    border-radius: 10px; border: 1px solid var(--border); background: var(--surface-0); color: var(--text-primary);
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    font: inherit; font-size: 14px; border-radius: 10px; padding: 9px 14px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .stack > * + * { margin-top: 12px; }
+  .msg { font-size: 13px; min-height: 20px; color: var(--text-secondary); }
+  .msg.err { color: var(--critical-text); }
+  .msg.ok { color: var(--good-text); }
+  .hint { font-size: 12px; color: var(--text-muted); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+
+  .status { display: flex; gap: 14px; align-items: flex-start; }
+  .status .icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; flex: none; background: var(--surface-2); }
+  .status .title { font-size: 17px; font-weight: 650; }
+  .status.active .icon { color: var(--good); }
+  .status.frozen .icon { color: var(--frozen); }
+  .status.blocked .icon { color: var(--critical); }
+  .freeze-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 14px; }
+
+  .banner { border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 14px; display: flex; gap: 10px; }
+  .banner.warn { background: var(--banner-warn); }
+  .banner.critical { background: var(--banner-critical); }
+  .banner.frozen { background: var(--banner-frozen); }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+  .stat .v { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 12px; color: var(--text-secondary); }
+
+  .history { list-style: none; margin: 0; padding: 0; }
+  .history li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--grid); }
+  .history li:last-child { border-bottom: 0; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex: none; background: var(--c); }
+  .history .what { font-weight: 550; }
+  .history .meta { font-size: 12px; color: var(--text-muted); }
+  .s-good { --c: var(--good); } .s-info { --c: var(--info); } .s-warning { --c: var(--warning); }
+  .s-serious { --c: var(--serious); } .s-critical { --c: var(--critical); } .s-frozen { --c: var(--frozen); }
+  .empty { color: var(--text-muted); padding: 6px 0; }
+  [hidden] { display: none !important; }
+  @media (max-width: 480px) { .stats { grid-template-columns: 1fr 1fr 1fr; } .stat .v { font-size: 19px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo" aria-hidden="true">IM</div>
+    <div>
+      <h1>Кабинет абонента</h1>
+      <div class="sub">INAI Mobile · безопасность SMS-кодов</div>
+    </div>
+    <span class="spacer"></span>
+    <button id="logout" hidden>Выйти</button>
+  </header>
+
+  <!-- Вход -->
+  <section id="login" class="card stack">
+    <h2>Вход по коду из SMS</h2>
+    <div>
+      <label for="msisdn">Номер телефона</label>
+      <input id="msisdn" class="mono" inputmode="numeric" maxlength="12" placeholder="996XXXXXXXXX" autocomplete="tel">
+    </div>
+    <div class="row"><button id="getCode" class="primary">Получить код</button></div>
+    <div id="codeStep" class="stack" hidden>
+      <div>
+        <label for="code">Код из SMS</label>
+        <input id="code" class="mono" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="one-time-code">
+      </div>
+      <div class="row"><button id="signIn" class="primary">Войти</button></div>
+    </div>
+    <div id="loginMsg" class="msg" role="status"></div>
+    <div class="hint">Демо: «SMS» приходит в файл outbox/sms.jsonl и консоль сервера.
+      Код для входа в кабинет выдаётся даже при заморозке — с теми же лимитами и защитой от перебора.</div>
+  </section>
+
+  <!-- Кабинет -->
+  <section id="cabinet" hidden>
+    <div id="banner"></div>
+
+    <div class="card">
+      <div id="status" class="status"></div>
+      <div id="freezeControls"></div>
+      <div id="actionMsg" class="msg" role="status" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h2>За последние 24 часа</h2>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="card">
+      <h2>Кто и когда запрашивал коды на ваш номер</h2>
+      <ul class="history" id="history"></ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const TOKEN_KEY = "cabinet_token";
+  const DURATIONS = [[3600, "1 час"], [86400, "24 часа"], [604800, "7 дней"], [null, "Пока не разморожу"]];
+  let token = null, data = null, timer = null, shown = "";
+
+  const store = {
+    get() { try { return sessionStorage.getItem(TOKEN_KEY); } catch { return null; } },
+    set(v) { try { v ? sessionStorage.setItem(TOKEN_KEY, v) : sessionStorage.removeItem(TOKEN_KEY); } catch {} },
+  };
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const time = ts => new Date(ts * 1000).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const clock = ts => new Date(ts * 1000).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const mask = m => m ? `+${m.slice(0, 3)} ${m.slice(3, 6)} ***${m.slice(-3)}` : "";
+  const durationText = d => (DURATIONS.find(([v]) => v === d) || [, `${d} c`])[1].toLowerCase();
+
+  async function api(method, path, body) {
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = "Bearer " + token;
+    let res;
+    try {
+      res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    } catch {
+      return { status: 0, json: { status: "network_error" } };  // сервер недоступен — повторим позже
+    }
+    let json = {};
+    try { json = await res.json(); } catch {}
+    return { status: res.status, json };
+  }
+
+  function explain(res) {
+    const j = res.json, wait = j.retry_after ? ` Повторите через ${j.retry_after} с.` : "";
+    switch (j.status) {
+      case "resend_too_early": return "Код уже отправлен недавно." + wait;
+      case "send_limit_exceeded": return "Слишком много кодов за 10 минут." + wait;
+      case "msisdn_blocked": return "Номер временно заблокирован после 5 неверных вводов." + wait;
+      case "invalid_code": return "Неверный код." + (j.attempts_left !== undefined ? ` Осталось попыток: ${j.attempts_left}.` : "");
+      case "code_expired": return "Срок действия кода истёк — запросите новый.";
+      case "ip_rate_limited": return "Слишком много проверок с вашего адреса." + wait;
+      case "bad_request": return "Проверьте формат: номер — 12 цифр с 996, код — 6 цифр.";
+      case "network_error": return "Нет связи с сервером. Попробуйте ещё раз.";
+      default: return `Ошибка ${res.status}.`;
+    }
+  }
+  const say = (el, text, kind = "") => { el.className = "msg " + kind; el.textContent = text; };
+
+  // ---------- вход ----------
+  $("getCode").addEventListener("click", async () => {
+    const msisdn = $("msisdn").value.trim();
+    $("getCode").disabled = true;
+    const res = await api("POST", "/cabinet/code", { msisdn });
+    $("getCode").disabled = false;
+    if (res.status === 200) {
+      $("codeStep").hidden = false; $("code").focus();
+      say($("loginMsg"), "Код отправлен. Он действует 2 минуты.", "ok");
+    } else say($("loginMsg"), explain(res), "err");
+  });
+
+  async function signIn() {
+    const res = await api("POST", "/cabinet/login", { msisdn: $("msisdn").value.trim(), code: $("code").value.trim() });
+    if (res.status === 200 && res.json.token) {
+      token = res.json.token; store.set(token);
+      $("code").value = ""; say($("loginMsg"), "");
+      await load();
+    } else say($("loginMsg"), explain(res), "err");
+  }
+  $("signIn").addEventListener("click", signIn);
+  $("code").addEventListener("keydown", e => { if (e.key === "Enter") signIn(); });
+  $("msisdn").addEventListener("keydown", e => { if (e.key === "Enter") $("getCode").click(); });
+
+  $("logout").addEventListener("click", async () => {
+    await api("POST", "/cabinet/logout");
+    signOut();
+  });
+  function signOut() {
+    token = null; store.set(null); data = null; shown = "";
+    clearInterval(timer); timer = null;
+    $("cabinet").hidden = true; $("logout").hidden = true; $("login").hidden = false;
+    $("codeStep").hidden = true;
+  }
+
+  // ---------- кабинет ----------
+  async function load() {
+    const res = await api("GET", "/cabinet/me");
+    if (res.status === 401) { signOut(); say($("loginMsg"), "Сессия истекла — войдите снова.", "err"); return; }
+    if (res.status !== 200) return;
+    data = res.json;
+    $("login").hidden = true; $("cabinet").hidden = false; $("logout").hidden = false;
+    // Перерисовываем только при изменениях: иначе кнопки пересоздаются под курсором.
+    const snapshot = JSON.stringify({ ...data, now: 0 });
+    if (snapshot !== shown) { shown = snapshot; render(); }
+    if (!timer) timer = setInterval(() => { if (!document.hidden) load(); }, 5000);
+  }
+
+  // событие -> [текст, статус]
+  function describe(e) {
+    const svc = e.service ? ` для «${esc(e.service)}»` : "";
+    switch (e.event) {
+      case "otp_issued": return e.scope === "cabinet" ? ["Код для входа в кабинет", "info"] : [`Выдан код${svc}`, "info"];
+      case "verify_success": return ["Код подтверждён", "good"];
+      case "verify_failed": return e.has_active_code
+        ? [`Введён неверный код (ошибка ${e.failed_attempts} из 5)`, "warning"]
+        : ["Ввод кода без действующего кода", "warning"];
+      case "verify_expired": return ["Попытка ввести истёкший код", "warning"];
+      case "msisdn_blocked": return ["Номер заблокирован на 15 минут после 5 ошибок", "critical"];
+      case "verify_rejected_blocked": return ["Ввод кода во время блокировки — отклонён", "critical"];
+      case "send_rejected_blocked": return [`Запрос кода${svc} во время блокировки — отклонён`, "critical"];
+      case "send_rate_limited": return [`Слишком частый запрос кода${svc} — отклонён`, "serious"];
+      case "send_rejected_frozen": return [`Запрос кода${svc} отклонён: коды заморожены`, "frozen"];
+      case "cabinet_login": return ["Вход в личный кабинет", "good"];
+      case "msisdn_frozen": return [`Коды заморожены (${durationText(e.duration)})`, "frozen"];
+      case "msisdn_unfrozen": return ["Заморозка снята", "info"];
+      default: return [esc(e.event), "info"];
+    }
+  }
+
+  function render() {
+    const now = data.now, frozen = data.frozen, blocked = data.blocked_until;
+    const day = data.history.filter(e => e.ts >= now - 86400);
+    const count = (...names) => day.filter(e => names.includes(e.event)).length;
+    const wrong = day.filter(e => e.event === "verify_failed" && e.has_active_code).length;
+    const issuedForServices = count("otp_issued") - day.filter(e => e.event === "otp_issued" && e.scope === "cabinet").length;
+    const rejectedFrozen = count("send_rejected_frozen");
+
+    // Статус
+    let cls, icon, title, text;
+    if (blocked) {
+      [cls, icon, title, text] = ["blocked", "⛔", "Номер временно заблокирован",
+        `После 5 неверных вводов коды не принимаются до ${clock(blocked)}. Это защита от подбора кода.`];
+    } else if (frozen) {
+      [cls, icon, title, text] = ["frozen", "❄", frozen.until ? `Коды заморожены до ${clock(frozen.until)}` : "Коды заморожены бессрочно",
+        "Ни один сервис не может отправить вам код — его нельзя выманить по телефону или перехватить. Вход в этот кабинет по-прежнему работает."];
+    } else {
+      [cls, icon, title, text] = ["active", "✓", "Коды выдаются",
+        "Сервисы могут отправлять вам SMS-коды. Если потеряли телефон или вам звонят «из банка» и просят код — заморозьте коды."];
+    }
+    $("status").className = "status " + cls;
+    $("status").innerHTML = `<div class="icon" aria-hidden="true">${icon}</div>
+      <div><div class="title">${esc(title)}</div><div class="sub">${esc(text)}</div>
+      <div class="hint mono" style="margin-top:6px">${esc(mask(data.msisdn))}</div></div>`;
+
+    $("freezeControls").innerHTML = frozen
+      ? `<div class="row" style="margin-top:14px"><button class="primary" data-unfreeze>Разморозить коды</button></div>`
+      : `<div class="freeze-buttons">${DURATIONS.map(([d, l]) => `<button data-freeze="${d}">❄ ${l}</button>`).join("")}</div>`;
+
+    // Предупреждения
+    const banners = [];
+    if (rejectedFrozen) banners.push(["frozen", `❄ Пока коды заморожены, отклонено запросов кода: ${rejectedFrozen}. Если это были не вы — заморозка сработала.`]);
+    if (wrong && !blocked) banners.push(["warn", `⚠ За сутки на ваш номер ввели неверный код ${wrong} раз. Если это были не вы — заморозьте коды.`]);
+    if (blocked) banners.push(["critical", "⛔ Кто-то подбирал код к вашему номеру — номер заблокирован автоматически."]);
+    $("banner").innerHTML = banners.map(([k, t]) => `<div class="banner ${k}" role="alert">${esc(t)}</div>`).join("");
+
+    // Сводка
+    $("stats").innerHTML = [[issuedForServices, "кодов выдано сервисам"], [wrong, "неверных вводов"], [rejectedFrozen + count("send_rate_limited", "send_rejected_blocked"), "запросов отклонено"]]
+      .map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+
+    // История
+    $("history").innerHTML = data.history.length
+      ? data.history.map(e => {
+          const [what, st] = describe(e);
+          return `<li><span class="dot s-${st}"></span><div><div class="what">${what}</div>
+            <div class="meta">${time(e.ts)}${e.ip ? " · IP " + esc(e.ip) : ""}</div></div></li>`;
+        }).join("")
+      : `<li class="empty">Событий пока нет</li>`;
+  }
+
+  $("freezeControls").addEventListener("click", async e => {
+    const btn = e.target.closest("button"); if (!btn) return;
+    btn.disabled = true;
+    const res = btn.hasAttribute("data-unfreeze")
+      ? await api("POST", "/cabinet/unfreeze")
+      : await api("POST", "/cabinet/freeze", { duration: btn.dataset.freeze === "null" ? null : Number(btn.dataset.freeze) });
+    if (res.status === 200) { data = res.json; shown = JSON.stringify({ ...data, now: 0 }); render(); say($("actionMsg"), btn.hasAttribute("data-unfreeze") ? "Заморозка снята." : "Коды заморожены. Действующий код аннулирован.", "ok"); }
+    else if (res.status === 401) signOut();
+    else { btn.disabled = false; say($("actionMsg"), explain(res), "err"); }
+  });
+
+  // восстановить сессию после перезагрузки страницы
+  token = store.get();
+  if (token) load();
+})();
+</script>
+</body>
+</html>

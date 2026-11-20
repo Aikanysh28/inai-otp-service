@@ -1,11 +1,22 @@
 """Слой API без привязки к HTTP-серверу: разбор запроса, валидация, маршруты, коды ответов.
 
-  POST /otp/send   {"msisdn"}          -> 200 | 400 | 423 | 429
-  POST /otp/verify {"msisdn", "code"}  -> 200 | 400 | 401 | 410 | 423 | 429
-  GET  /health                         -> 200 | 503
-  GET  /dashboard                      -> HTML-дашборд событий безопасности
-  GET  /demo                           -> HTML-форма ручной проверки OTP
-  GET  /api/security/events            -> JSON для дашборда
+  POST /otp/send   {"msisdn", "service"?}  -> 200 | 400 | 423 | 429
+  POST /otp/verify {"msisdn", "code"}      -> 200 | 400 | 401 | 410 | 423 | 429
+  GET  /health                             -> 200 | 503
+  GET  /dashboard                          -> HTML-дашборд событий безопасности
+  GET  /demo                               -> HTML-форма ручной проверки OTP
+  POST /demo/send  {"msisdn"}              -> как /otp/send, но с кодом в ответе;
+                                              только при OTP_DEMO_SHOW_CODE=1
+  GET  /api/security/events                -> JSON для дашборда
+
+Личный кабинет абонента (Authorization: Bearer <token> там, где нужен вход):
+  GET  /cabinet                            -> HTML-страница кабинета
+  POST /cabinet/code     {"msisdn"}        -> код для входа (как /otp/send)
+  POST /cabinet/login    {"msisdn","code"} -> {"token", "expires_in"} (ошибки — как /otp/verify)
+  GET  /cabinet/me                         -> статус номера и история запросов кодов
+  POST /cabinet/freeze   {"duration"}      -> заморозить выдачу кодов (сек или null)
+  POST /cabinet/unfreeze                   -> снять заморозку
+  POST /cabinet/logout                     -> завершить сессию
 """
 from __future__ import annotations
 
@@ -18,22 +29,24 @@ from functools import lru_cache
 from typing import Any, Callable, Mapping, Optional, Union
 from urllib.parse import parse_qs, urlsplit
 
-from .otp_service import OTPService, SendStatus, VerifyStatus
+from .cabinet import FREEZE_DURATIONS, SESSION_TTL, Cabinet
+from .otp_service import OTPService, SendResult, SendStatus, VerifyResult, VerifyStatus
 from .security_log import SecurityEvent
 from .store import StoreUnavailable
 
 MSISDN_RE = re.compile(r"^996\d{9}$")  # строка из 12 цифр, начинается с 996
+SERVICE_MAX_LENGTH = 40
 EVENTS_DEFAULT_LIMIT = 100
 EVENTS_MAX_LIMIT = 1000
 STORE_RETRY_AFTER = 5
-DASHBOARD_HTML = os.path.join(os.path.dirname(__file__), "static", "dashboard.html")
-DEMO_HTML = os.path.join(os.path.dirname(__file__), "static", "demo.html")
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 SEND_HTTP_STATUS = {
     SendStatus.SENT: 200,
     SendStatus.RESEND_TOO_EARLY: 429,
     SendStatus.SEND_LIMIT: 429,
     SendStatus.BLOCKED: 423,
+    SendStatus.FROZEN: 423,
 }
 
 VERIFY_HTTP_STATUS = {
@@ -74,6 +87,10 @@ class Request:
             raise BadRequest("body must be a JSON object")
         return data
 
+    def bearer_token(self) -> str:
+        scheme, _, token = (self.headers.get("Authorization") or "").partition(" ")
+        return token.strip() if scheme.lower() == "bearer" else ""
+
 
 @dataclass
 class Response:
@@ -109,6 +126,16 @@ def validate_code(value: object, length: int) -> str:
     return value
 
 
+def validate_service(value: object) -> Optional[str]:
+    """Необязательное имя сервиса, запросившего код (видно абоненту в истории)."""
+    if value is None:
+        return None
+    if not isinstance(value, str) or not 0 < len(value.strip()) <= SERVICE_MAX_LENGTH \
+            or not value.isprintable():
+        raise BadRequest(f"service must be a printable string up to {SERVICE_MAX_LENGTH} chars")
+    return value.strip()
+
+
 def _field(body: dict, name: str) -> object:
     if name not in body:
         raise BadRequest(f"field '{name}' is required")
@@ -119,16 +146,40 @@ def _without_none(**fields: Any) -> dict:
     return {name: value for name, value in fields.items() if value is not None}
 
 
-@lru_cache(maxsize=2)
-def _static_page(path: str) -> Response:
-    with open(path, "rb") as f:
-        return Response(200, f.read(),
-                        {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"})
+def _send_response(result: SendResult, show_code: bool = False) -> Response:
+    """show_code — только для демо-режима (OTP_DEMO_SHOW_CODE=1): код прямо в ответе."""
+    if result.status is SendStatus.SENT:
+        payload = _without_none(status=result.status.value, expires_in=result.expires_in,
+                                next_send_in=result.retry_after,
+                                code=result.demo_code if show_code else None)
+    else:
+        payload = _without_none(status=result.status.value, retry_after=result.retry_after)
+    return Response.json(SEND_HTTP_STATUS[result.status], payload,
+                         retry_after=result.retry_after)
+
+
+def _verify_response(result: VerifyResult, **extra: Any) -> Response:
+    payload = _without_none(status=result.status.value, attempts_left=result.attempts_left,
+                            retry_after=result.retry_after, **extra)
+    return Response.json(VERIFY_HTTP_STATUS[result.status], payload,
+                         retry_after=result.retry_after)
+
+
+@lru_cache(maxsize=None)
+def _static_page(name: str) -> bytes:
+    with open(os.path.join(STATIC_DIR, name), "rb") as f:
+        return f.read()
+
+
+def _html(name: str) -> Response:
+    return Response(200, _static_page(name),
+                    {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"})
 
 
 class OTPApi:
     def __init__(self, service: OTPService, dashboard_token: str = ""):
         self.service = service
+        self.cabinet = Cabinet(service)
         self.dashboard_token = dashboard_token
         self._routes: dict[tuple[str, str], Callable[[Request], Response]] = {
             ("GET", "/health"): self.health,
@@ -137,6 +188,13 @@ class OTPApi:
             ("GET", "/dashboard"): self.dashboard,
             ("GET", "/demo"): self.demo,
             ("GET", "/api/security/events"): self.events,
+            ("GET", "/cabinet"): lambda request: _html("cabinet.html"),
+            ("POST", "/cabinet/code"): self.cabinet_code,
+            ("POST", "/cabinet/login"): self.cabinet_login,
+            ("GET", "/cabinet/me"): self._authenticated(self.cabinet_me),
+            ("POST", "/cabinet/freeze"): self._authenticated(self.cabinet_freeze),
+            ("POST", "/cabinet/unfreeze"): self._authenticated(self.cabinet_unfreeze),
+            ("POST", "/cabinet/logout"): self._authenticated(self.cabinet_logout),
         }
         if service.settings.demo_show_code:
             self._routes["POST", "/demo/send"] = self.demo_send
@@ -170,32 +228,71 @@ class OTPApi:
         return response
 
     def _send(self, request: Request, *, show_code: bool) -> Response:
-        msisdn = validate_msisdn(_field(request.json(), "msisdn"))
-        result = self.service.send(msisdn, request.ip)
-
-        if result.status is SendStatus.SENT:
-            payload = _without_none(status=result.status.value, expires_in=result.expires_in,
-                                    next_send_in=result.retry_after,
-                                    code=result.demo_code if show_code else None)
-        else:
-            payload = _without_none(status=result.status.value, retry_after=result.retry_after)
-        return Response.json(SEND_HTTP_STATUS[result.status], payload,
-                             retry_after=result.retry_after)
+        body = request.json()
+        msisdn = validate_msisdn(_field(body, "msisdn"))
+        service = validate_service(body.get("service"))
+        result = self.service.send(msisdn, request.ip, service=service)
+        return _send_response(result, show_code=show_code)
 
     def verify(self, request: Request) -> Response:
         # IP-лимит списывается первым — до разбора тела, проверки кода и блокировки номера:
         # любой verify, даже с ошибкой формата, расходует квоту IP.
         result = self.service.consume_verify_quota(request.ip)
         if result is None:
-            body = request.json()
-            msisdn = validate_msisdn(_field(body, "msisdn"))
-            code = validate_code(_field(body, "code"), self.service.settings.code_length)
+            msisdn, code = self._msisdn_and_code(request)
             result = self.service.verify_code(msisdn, code, request.ip)
+        return _verify_response(result)
 
-        payload = _without_none(status=result.status.value, attempts_left=result.attempts_left,
-                                retry_after=result.retry_after)
-        return Response.json(VERIFY_HTTP_STATUS[result.status], payload,
-                             retry_after=result.retry_after)
+    def _msisdn_and_code(self, request: Request) -> tuple[str, str]:
+        body = request.json()
+        msisdn = validate_msisdn(_field(body, "msisdn"))
+        code = validate_code(_field(body, "code"), self.service.settings.code_length)
+        return msisdn, code
+
+    # ---------- личный кабинет ----------
+
+    def cabinet_code(self, request: Request) -> Response:
+        msisdn = validate_msisdn(_field(request.json(), "msisdn"))
+        return _send_response(self.cabinet.request_code(msisdn, request.ip))
+
+    def cabinet_login(self, request: Request) -> Response:
+        # Вход по коду — та же проверка OTP, поэтому и тот же IP-лимит.
+        result = self.service.consume_verify_quota(request.ip)
+        token = None
+        if result is None:
+            msisdn, code = self._msisdn_and_code(request)
+            result, token = self.cabinet.login(msisdn, code, request.ip)
+        if token is None:
+            return _verify_response(result)
+        return _verify_response(result, token=token, expires_in=SESSION_TTL)
+
+    def _authenticated(self, handler: Callable[[Request, str], Response]
+                       ) -> Callable[[Request], Response]:
+        """Обёртка маршрута кабинета: пускает только с действующим токеном сессии."""
+        def route(request: Request) -> Response:
+            msisdn = self.cabinet.session_msisdn(request.bearer_token())
+            if msisdn is None:
+                return Response.error(401, "unauthorized")
+            return handler(request, msisdn)
+        return route
+
+    def cabinet_me(self, request: Request, msisdn: str) -> Response:
+        return Response(200, self.cabinet.overview(msisdn), {"Cache-Control": "no-store"})
+
+    def cabinet_freeze(self, request: Request, msisdn: str) -> Response:
+        duration = request.json().get("duration")
+        if isinstance(duration, bool) or duration not in FREEZE_DURATIONS:
+            raise BadRequest(f"duration must be one of {list(FREEZE_DURATIONS)}")
+        self.cabinet.freeze(msisdn, request.ip, duration)
+        return self.cabinet_me(request, msisdn)
+
+    def cabinet_unfreeze(self, request: Request, msisdn: str) -> Response:
+        self.cabinet.unfreeze(msisdn, request.ip)
+        return self.cabinet_me(request, msisdn)
+
+    def cabinet_logout(self, request: Request, msisdn: str) -> Response:
+        self.cabinet.logout(request.bearer_token())
+        return Response(200, {"status": "logged_out"})
 
     # ---------- служебное ----------
 
@@ -210,10 +307,10 @@ class OTPApi:
     def dashboard(self, request: Request) -> Response:
         if not self._authorized(request):
             return Response.error(401, "unauthorized")
-        return _static_page(DASHBOARD_HTML)
+        return _html("dashboard.html")
 
     def demo(self, request: Request) -> Response:
-        return _static_page(DEMO_HTML)
+        return _html("demo.html")
 
     def events(self, request: Request) -> Response:
         if not self._authorized(request):

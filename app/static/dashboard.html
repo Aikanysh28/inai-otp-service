@@ -167,6 +167,10 @@
     verify_ip_rate_limited:  ["Лимит проверок по IP",     "serious",  "⏱"],
     send_rate_limited:       ["Лимит отправки",           "serious",  "⏱"],
     store_unavailable:       ["Хранилище недоступно",     "critical", "!"],
+    cabinet_login:           ["Вход в кабинет абонента",  "good",     "👤"],
+    msisdn_frozen:           ["Абонент заморозил коды",   "info",     "❄"],
+    msisdn_unfrozen:         ["Абонент снял заморозку",   "info",     "☀"],
+    send_rejected_frozen:    ["Отправка: коды заморожены", "serious", "❄"],
   };
   const FILTERS = [
     ["all", "Все", () => true],
@@ -175,6 +179,7 @@
     ["blocks", "Блокировки", e => EVENTS[e] && EVENTS[e][1] === "critical"],
     ["limits", "Лимиты", e => EVENTS[e] && EVENTS[e][1] === "serious"],
     ["success", "Успешные", e => e === "verify_success"],
+    ["cabinet", "Кабинет абонента", e => ["cabinet_login", "msisdn_frozen", "msisdn_unfrozen", "send_rejected_frozen"].includes(e)],
   ];
 
   let data = null, live = true, filter = "all", showTable = false;

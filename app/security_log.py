@@ -26,6 +26,11 @@ class SecurityEvent(str, Enum):
     VERIFY_IP_RATE_LIMITED = "verify_ip_rate_limited"
     MSISDN_BLOCKED = "msisdn_blocked"
     STORE_UNAVAILABLE = "store_unavailable"
+    # личный кабинет абонента
+    CABINET_LOGIN = "cabinet_login"
+    MSISDN_FROZEN = "msisdn_frozen"
+    MSISDN_UNFROZEN = "msisdn_unfrozen"
+    SEND_REJECTED_FROZEN = "send_rejected_frozen"
 
 
 def _build_logger(name: str, path: str, console: bool) -> logging.Logger:
@@ -69,13 +74,17 @@ class SecurityLog:
             SecurityEvent.VERIFY_IP_RATE_LIMITED,
             SecurityEvent.SEND_RATE_LIMITED,
             SecurityEvent.SEND_REJECTED_BLOCKED,
+            SecurityEvent.SEND_REJECTED_FROZEN,
         ),
     }
     _CATEGORY_OF = {
         event.value: category for category, events in CATEGORIES.items() for event in events
     }
     # Штатные события не делают IP подозрительным
-    _ROUTINE = frozenset({SecurityEvent.OTP_ISSUED.value, SecurityEvent.VERIFY_SUCCESS.value})
+    _ROUTINE = frozenset(event.value for event in (
+        SecurityEvent.OTP_ISSUED, SecurityEvent.VERIFY_SUCCESS, SecurityEvent.CABINET_LOGIN,
+        SecurityEvent.MSISDN_FROZEN, SecurityEvent.MSISDN_UNFROZEN,
+    ))
 
     def __init__(self, log_dir: str, clock: Callable[[], float] = time.time,
                  console: bool = True):
