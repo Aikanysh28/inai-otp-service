@@ -1,0 +1,14 @@
+{
+  "now": 1795163280.57,
+  "window": 3600,
+  "threat_level": "high",
+  "ips_active": 41,
+  "ips_medium": 1,
+  "ips_high": 2,
+  "alerts": 5,
+  "sms_sent": 136,
+  "sms_suspicious": 80,
+  "sms_cost_suspicious": 80.0,
+  "currency": "сом",
+  "conversion": 0.324
+}

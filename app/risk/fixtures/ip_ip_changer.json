@@ -1,0 +1,109 @@
+{
+  "ip": "97.203.61.241",
+  "ts": 1795163280.57,
+  "score": 15,
+  "level": "low",
+  "would_action": "allow",
+  "would_action_text": "обычный режим",
+  "reasons": [
+    {
+      "name": "new_ip",
+      "title": "Вход с нового IP",
+      "points": 15,
+      "detail": "номер раньше подтверждался с другого IP"
+    }
+  ],
+  "current_score": 15,
+  "incident_type": "none",
+  "incident_title": "",
+  "incident_subtitle": "",
+  "level_title": "Низкий",
+  "would_action_title": "без ограничений",
+  "first_high": null,
+  "detected": null,
+  "savings": null,
+  "first_seen": 1795163252.189,
+  "last_seen": 1795163280.57,
+  "stats": {
+    "numbers": 1,
+    "sms_sent": 1,
+    "sms_rejected": 0,
+    "verify_ok": 1,
+    "verify_fail": 0,
+    "verify_expired": 0,
+    "verify_locked": 0,
+    "ip_limited": 0
+  },
+  "sms_cost": 1.0,
+  "currency": "сом",
+  "sparkline": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1
+  ],
+  "events": [
+    {
+      "ts": 1795163280.57,
+      "event": "verify_ok",
+      "msisdn": "+996501***240",
+      "status": 200,
+      "reason": null,
+      "scope": null,
+      "new_ip": true
+    },
+    {
+      "ts": 1795163252.189,
+      "event": "send_ok",
+      "msisdn": "+996501***240",
+      "status": 200,
+      "reason": null,
+      "scope": null,
+      "new_ip": true
+    }
+  ],
+  "timeline_groups": [
+    {
+      "first_ts": 1795163252.189,
+      "last_ts": 1795163252.189,
+      "event": "send_ok",
+      "status": 200,
+      "msisdn": "+996501***240",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996501***240",
+      "msisdn_last": "+996501***240",
+      "new_ip": true,
+      "scope": null
+    },
+    {
+      "first_ts": 1795163280.57,
+      "last_ts": 1795163280.57,
+      "event": "verify_ok",
+      "status": 200,
+      "msisdn": "+996501***240",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996501***240",
+      "msisdn_last": "+996501***240",
+      "new_ip": true,
+      "scope": null
+    }
+  ],
+  "timeline_skipped": 0,
+  "defense_facts": {
+    "numbers_blocked": 0,
+    "locked_attempts": 0,
+    "ip_limited": 0,
+    "send_rejected": 0,
+    "blocked_numbers": [],
+    "fails_to_block": 5
+  },
+  "weights_sum": 15
+}

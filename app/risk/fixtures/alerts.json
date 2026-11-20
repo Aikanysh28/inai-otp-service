@@ -1,0 +1,144 @@
+[
+  {
+    "incident_type": "sms_pumping",
+    "incident_title": "SMS-флуд",
+    "incident_subtitle": "бот тратит бюджет на SMS",
+    "id": 5,
+    "ts": 1795163167.094,
+    "ip": "185.220.101.7",
+    "severity": "high",
+    "score": 70,
+    "reasons": [
+      {
+        "name": "fan_out",
+        "title": "Массовая рассылка",
+        "points": 20,
+        "detail": "коды на 6 номеров с одного IP за 10 мин"
+      },
+      {
+        "name": "sequential",
+        "title": "Перебор номеров по порядку",
+        "points": 25,
+        "detail": "100% номеров идут подряд"
+      },
+      {
+        "name": "no_conversion",
+        "title": "Коды не вводятся",
+        "points": 25,
+        "detail": "6 SMS отправлено, подтверждено 0"
+      }
+    ],
+    "would_action": "deny",
+    "message": "IP 185.220.101.7: коды на 6 номеров с одного IP за 10 мин; 100% номеров идут подряд; 6 SMS отправлено, подтверждено 0. В боевом режиме: отказ (429) и тревога."
+  },
+  {
+    "incident_type": "sms_pumping",
+    "incident_title": "SMS-флуд",
+    "incident_subtitle": "бот тратит бюджет на SMS",
+    "id": 4,
+    "ts": 1795163166.493,
+    "ip": "185.220.101.7",
+    "severity": "medium",
+    "score": 50,
+    "reasons": [
+      {
+        "name": "sequential",
+        "title": "Перебор номеров по порядку",
+        "points": 25,
+        "detail": "100% номеров идут подряд"
+      },
+      {
+        "name": "no_conversion",
+        "title": "Коды не вводятся",
+        "points": 25,
+        "detail": "5 SMS отправлено, подтверждено 0"
+      }
+    ],
+    "would_action": "stricter_delay",
+    "message": "IP 185.220.101.7: 100% номеров идут подряд; 5 SMS отправлено, подтверждено 0. В боевом режиме: задержки строже (×2)."
+  },
+  {
+    "incident_type": "sms_pumping",
+    "incident_title": "SMS-флуд",
+    "incident_subtitle": "бот тратит бюджет на SMS",
+    "id": 3,
+    "ts": 1795163031.376,
+    "ip": "45.13.7.200",
+    "severity": "high",
+    "score": 70,
+    "reasons": [
+      {
+        "name": "fan_out",
+        "title": "Массовая рассылка",
+        "points": 20,
+        "detail": "коды на 6 номеров с одного IP за 10 мин"
+      },
+      {
+        "name": "sequential",
+        "title": "Перебор номеров по порядку",
+        "points": 25,
+        "detail": "100% номеров идут подряд"
+      },
+      {
+        "name": "no_conversion",
+        "title": "Коды не вводятся",
+        "points": 25,
+        "detail": "6 SMS отправлено, подтверждено 0"
+      }
+    ],
+    "would_action": "deny",
+    "message": "IP 45.13.7.200: коды на 6 номеров с одного IP за 10 мин; 100% номеров идут подряд; 6 SMS отправлено, подтверждено 0. В боевом режиме: отказ (429) и тревога."
+  },
+  {
+    "incident_type": "sms_pumping",
+    "incident_title": "SMS-флуд",
+    "incident_subtitle": "бот тратит бюджет на SMS",
+    "id": 2,
+    "ts": 1795163029.206,
+    "ip": "45.13.7.200",
+    "severity": "medium",
+    "score": 50,
+    "reasons": [
+      {
+        "name": "sequential",
+        "title": "Перебор номеров по порядку",
+        "points": 25,
+        "detail": "100% номеров идут подряд"
+      },
+      {
+        "name": "no_conversion",
+        "title": "Коды не вводятся",
+        "points": 25,
+        "detail": "5 SMS отправлено, подтверждено 0"
+      }
+    ],
+    "would_action": "stricter_delay",
+    "message": "IP 45.13.7.200: 100% номеров идут подряд; 5 SMS отправлено, подтверждено 0. В боевом режиме: задержки строже (×2)."
+  },
+  {
+    "incident_type": "code_bruteforce",
+    "incident_title": "Подбор кода к номеру",
+    "incident_subtitle": "попытка угнать аккаунт",
+    "id": 1,
+    "ts": 1795162695.106,
+    "ip": "139.66.77.135",
+    "severity": "medium",
+    "score": 40,
+    "reasons": [
+      {
+        "name": "fail_rate",
+        "title": "Подбор кода",
+        "points": 25,
+        "detail": "8 неудачных проверок кода (100% попыток)"
+      },
+      {
+        "name": "hammering_locked",
+        "title": "Попытки к заблокированному номеру",
+        "points": 15,
+        "detail": "3 попытки после блокировки"
+      }
+    ],
+    "would_action": "stricter_delay",
+    "message": "IP 139.66.77.135: 8 неудачных проверок кода (100% попыток); 3 попытки после блокировки. В боевом режиме: задержки строже (×2)."
+  }
+]

@@ -1,0 +1,587 @@
+{
+  "ip": "185.220.101.7",
+  "ts": 1795163212.32,
+  "score": 100,
+  "level": "high",
+  "would_action": "deny",
+  "would_action_text": "отказ (429) и тревога",
+  "reasons": [
+    {
+      "name": "fan_out",
+      "title": "Массовая рассылка",
+      "points": 40,
+      "detail": "коды на 50 номеров с одного IP за 10 мин"
+    },
+    {
+      "name": "sequential",
+      "title": "Перебор номеров по порядку",
+      "points": 25,
+      "detail": "100% номеров идут подряд"
+    },
+    {
+      "name": "no_conversion",
+      "title": "Коды не вводятся",
+      "points": 25,
+      "detail": "50 SMS отправлено, подтверждено 0"
+    },
+    {
+      "name": "fail_rate",
+      "title": "Подбор кода",
+      "points": 25,
+      "detail": "20 неудачных проверок кода (100% попыток)"
+    },
+    {
+      "name": "ip_limited",
+      "title": "Превышен лимит проверок",
+      "points": 15,
+      "detail": "лимит 20 проверок/мин сработал 80 раз"
+    }
+  ],
+  "current_score": 100,
+  "incident_type": "distributed_bruteforce",
+  "incident_title": "Распределённый подбор кодов",
+  "incident_subtitle": "перебор по многим номерам с одного IP",
+  "level_title": "Критический",
+  "would_action_title": "блокировка",
+  "first_high": {
+    "ts": 1795163167.094,
+    "after_seconds": 3.5,
+    "at_number": 6
+  },
+  "detected": {
+    "ts": 1795163166.493,
+    "after_seconds": 2.8,
+    "at_number": 5,
+    "level": "medium"
+  },
+  "savings": null,
+  "first_seen": 1795163163.643,
+  "last_seen": 1795163212.32,
+  "stats": {
+    "numbers": 50,
+    "sms_sent": 50,
+    "sms_rejected": 0,
+    "verify_ok": 0,
+    "verify_fail": 20,
+    "verify_expired": 0,
+    "verify_locked": 0,
+    "ip_limited": 80
+  },
+  "sms_cost": 50.0,
+  "currency": "сом",
+  "sparkline": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    150,
+    0,
+    0
+  ],
+  "events": [
+    {
+      "ts": 1795163212.32,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163212.24,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163212.096,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163211.942,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163211.71,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163211.559,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163211.338,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163211.051,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163210.961,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163210.813,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163210.544,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163210.369,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163210.228,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163210.15,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163210.03,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163209.822,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163209.621,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163209.481,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163209.366,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163209.129,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163209.056,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163208.988,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163208.705,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163208.426,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163208.279,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163207.981,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163207.682,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163207.505,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163207.436,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163207.314,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163207.145,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163207.074,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163206.946,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163206.759,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163206.461,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163206.219,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163206.052,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163205.931,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163205.704,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163205.531,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163205.427,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163205.352,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163205.059,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163204.887,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163204.717,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163204.633,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163204.428,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163204.205,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163203.992,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795163203.859,
+      "event": "ip_rate_limited",
+      "msisdn": null,
+      "status": 429,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    }
+  ],
+  "timeline_groups": [
+    {
+      "first_ts": 1795163163.643,
+      "last_ts": 1795163194.462,
+      "event": "send_ok",
+      "status": 200,
+      "msisdn": null,
+      "count": 50,
+      "numbers": 50,
+      "msisdn_first": "+996756***891",
+      "msisdn_last": "+996756***940",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795163194.863,
+      "last_ts": 1795163198.64,
+      "event": "verify_fail",
+      "status": 401,
+      "msisdn": null,
+      "count": 20,
+      "numbers": 20,
+      "msisdn_first": "+996756***891",
+      "msisdn_last": "+996756***910",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795163198.93,
+      "last_ts": 1795163212.32,
+      "event": "ip_rate_limited",
+      "status": 429,
+      "msisdn": null,
+      "count": 80,
+      "numbers": 0,
+      "msisdn_first": null,
+      "msisdn_last": null,
+      "new_ip": false,
+      "scope": null
+    }
+  ],
+  "timeline_skipped": 0,
+  "defense_facts": {
+    "numbers_blocked": 0,
+    "locked_attempts": 0,
+    "ip_limited": 80,
+    "send_rejected": 0,
+    "blocked_numbers": [],
+    "fails_to_block": 5
+  },
+  "weights_sum": 130
+}

@@ -17,6 +17,7 @@
   POST /cabinet/freeze   {"duration"}      -> заморозить выдачу кодов (сек или null)
   POST /cabinet/unfreeze                   -> снять заморозку
   POST /cabinet/logout                     -> завершить сессию
+  GET  /api/risk/{overview,timeline,ips,ip,scatter,alerts,meta,graph,summary} -> модуль рисков
 """
 from __future__ import annotations
 
@@ -31,6 +32,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from .cabinet import FREEZE_DURATIONS, SESSION_TTL, Cabinet
 from .otp_service import OTPService, SendResult, SendStatus, VerifyResult, VerifyStatus
+from .risk import RiskEngine
 from .security_log import SecurityEvent
 from .store import StoreUnavailable
 
@@ -39,6 +41,8 @@ SERVICE_MAX_LENGTH = 40
 EVENTS_DEFAULT_LIMIT = 100
 EVENTS_MAX_LIMIT = 1000
 STORE_RETRY_AFTER = 5
+RISK_LEVELS = ("low", "medium", "high")
+RISK_IP_MAX_LENGTH = 64
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 SEND_HTTP_STATUS = {
@@ -142,6 +146,22 @@ def _field(body: dict, name: str) -> object:
     return body[name]
 
 
+def _int_param(request: Request, name: str, default: int, low: int,
+               high: Optional[int]) -> int:
+    """Целый query-параметр в диапазоне [low, high] (high=None — без верхней границы)."""
+    raw = request.query.get(name)
+    if raw is None:
+        return default
+    bounds = f"{low}..{high}" if high is not None else f">= {low}"
+    try:
+        value = int(raw)
+    except ValueError:
+        raise BadRequest(f"{name} must be an integer {bounds}") from None
+    if value < low or (high is not None and value > high):
+        raise BadRequest(f"{name} must be an integer {bounds}")
+    return value
+
+
 def _without_none(**fields: Any) -> dict:
     return {name: value for name, value in fields.items() if value is not None}
 
@@ -177,10 +197,12 @@ def _html(name: str) -> Response:
 
 
 class OTPApi:
-    def __init__(self, service: OTPService, dashboard_token: str = ""):
+    def __init__(self, service: OTPService, dashboard_token: str = "",
+                 risk: Optional[RiskEngine] = None):
         self.service = service
         self.cabinet = Cabinet(service)
         self.dashboard_token = dashboard_token
+        self.risk = risk
         self._routes: dict[tuple[str, str], Callable[[Request], Response]] = {
             ("GET", "/health"): self.health,
             ("POST", "/otp/send"): self.send,
@@ -195,6 +217,16 @@ class OTPApi:
             ("POST", "/cabinet/freeze"): self._authenticated(self.cabinet_freeze),
             ("POST", "/cabinet/unfreeze"): self._authenticated(self.cabinet_unfreeze),
             ("POST", "/cabinet/logout"): self._authenticated(self.cabinet_logout),
+            # модуль рисков: только чтение, авторизация как у /api/security/events
+            ("GET", "/api/risk/overview"): self._risk_route(self.risk_overview),
+            ("GET", "/api/risk/timeline"): self._risk_route(self.risk_timeline),
+            ("GET", "/api/risk/ips"): self._risk_route(self.risk_ips),
+            ("GET", "/api/risk/ip"): self._risk_route(self.risk_ip),
+            ("GET", "/api/risk/scatter"): self._risk_route(self.risk_scatter),
+            ("GET", "/api/risk/alerts"): self._risk_route(self.risk_alerts),
+            ("GET", "/api/risk/meta"): self._risk_route(self.risk_meta),
+            ("GET", "/api/risk/graph"): self._risk_route(self.risk_graph),
+            ("GET", "/api/risk/summary"): self._risk_route(self.risk_summary),
         }
         if service.settings.demo_show_code:
             self._routes["POST", "/demo/send"] = self.demo_send
@@ -322,6 +354,68 @@ class OTPApi:
         data = self.service.log.snapshot(limit=max(1, min(limit, EVENTS_MAX_LIMIT)))
         data["storage"] = self.service.store.name
         return Response(200, data, {"Cache-Control": "no-store"})
+
+    # ---------- модуль рисков ----------
+
+    def _risk_route(self, handler: Callable[[Request, RiskEngine], Any]
+                    ) -> Callable[[Request], Response]:
+        """Авторизация, проверка, что модуль включён, и изоляция его исключений (-> 503)."""
+        def route(request: Request) -> Response:
+            if not self._authorized(request):
+                return Response.error(401, "unauthorized")
+            if self.risk is None:
+                return Response(503, {"status": "risk_disabled"}, {"Cache-Control": "no-store"})
+            call = handler(request, self.risk)  # разбор параметров: BadRequest -> 400
+            try:
+                data = call()
+            except Exception:  # noqa: BLE001 — ошибка модуля рисков не уходит в общий обработчик
+                return Response(503, {"status": "risk_error"}, {"Cache-Control": "no-store"})
+            if data is None:
+                return Response(404, {"status": "not_found"}, {"Cache-Control": "no-store"})
+            return Response(200, data, {"Cache-Control": "no-store"})
+        return route
+
+    def risk_overview(self, request: Request, risk: RiskEngine):
+        window = _int_param(request, "window", 3600, 60, 86400)
+        return lambda: risk.overview(window=window)
+
+    def risk_timeline(self, request: Request, risk: RiskEngine):
+        window = _int_param(request, "window", 3600, 60, 86400)
+        step = _int_param(request, "step", 60, 60, 3600)
+        return lambda: risk.timeline(window=window, step=step)
+
+    def risk_ips(self, request: Request, risk: RiskEngine):
+        limit = _int_param(request, "limit", 20, 1, 200)
+        min_level = request.query.get("min_level", "low")
+        if min_level not in RISK_LEVELS:
+            raise BadRequest("min_level must be one of: low, medium, high")
+        return lambda: risk.top_ips(limit=limit, min_level=min_level)
+
+    def risk_ip(self, request: Request, risk: RiskEngine):
+        ip = request.query.get("ip", "")
+        if not 1 <= len(ip) <= RISK_IP_MAX_LENGTH:
+            raise BadRequest(f"ip is required (1..{RISK_IP_MAX_LENGTH} characters)")
+        return lambda: risk.ip_detail(ip)
+
+    def risk_scatter(self, request: Request, risk: RiskEngine):
+        window = _int_param(request, "window", 1800, 60, 86400)
+        return lambda: risk.scatter(window=window)
+
+    def risk_alerts(self, request: Request, risk: RiskEngine):
+        limit = _int_param(request, "limit", 50, 1, 500)
+        since_id = _int_param(request, "since_id", 0, 0, None)
+        return lambda: risk.alerts(limit=limit, since_id=since_id)
+
+    def risk_meta(self, request: Request, risk: RiskEngine):
+        return risk.meta
+
+    def risk_graph(self, request: Request, risk: RiskEngine):
+        window = _int_param(request, "window", 600, 60, 3600)
+        return lambda: risk.graph(window=window)
+
+    def risk_summary(self, request: Request, risk: RiskEngine):
+        window = _int_param(request, "window", 600, 60, 3600)
+        return lambda: risk.summary(window=window)
 
     def _authorized(self, request: Request) -> bool:
         if not self.dashboard_token:

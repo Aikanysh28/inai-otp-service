@@ -1,7 +1,9 @@
 """Демонстрация атак на OTP-сервис (только стандартная библиотека).
 
   1. single      — перебор кода для одного номера;
-  2. distributed — распределённый перебор по 50 номерам с одного IP.
+  2. distributed — распределённый перебор по 50 номерам с одного IP;
+  3. pumping     — SMS pumping: медленные send на номера подряд без ввода кодов
+                   (только с --only pumping, в запуск по умолчанию не входит).
 
 Чтобы доказать, что защита реально останавливает атаку (а не просто «не повезло»),
 скрипт подмешивает НАСТОЯЩИЙ код в середину перебора — «перехватывает» его из
@@ -10,6 +12,10 @@
 
 Запуск:  python attack.py [--url http://127.0.0.1:8000] [--attempts 1000]
 Код выхода 0 — обе атаки остановлены, 1 — хотя бы одна успешна.
+
+Pumping:  python attack.py --only pumping --client-ip 45.13.7.200 --token <DASHBOARD_TOKEN>
+(X-Forwarded-For учитывается, только если сервер запущен с OTP_TRUSTED_PROXIES=127.0.0.1.)
+Код выхода 0 — модуль рисков поднял тревогу high на этот IP (или токен не передан), иначе 1.
 """
 from __future__ import annotations
 
@@ -38,9 +44,9 @@ STATUS_LABELS = {
 }
 
 
-def post(url: str, payload: dict) -> tuple[int, dict]:
+def post(url: str, payload: dict, headers: Optional[dict] = None) -> tuple[int, dict]:
     req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
-                                 headers={"Content-Type": "application/json"})
+                                 headers={"Content-Type": "application/json", **(headers or {})})
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             status, raw = resp.status, resp.read()
@@ -148,7 +154,114 @@ def attack_distributed(base: str, attempts: int, workers: int, outbox: str,
     return report(title, stats, planted=known > 0)
 
 
-def main() -> int:
+# ---------- SMS pumping (только --only pumping) ----------
+
+PUMPING_DEFAULTS = {"range_prefix": "99670073", "count": 60, "interval": 1.5, "jitter": 0.5}
+
+
+def get_json(url: str, token: Optional[str] = None) -> tuple[int, Optional[object]]:
+    """GET к API админки; (статус, JSON или None). Сетевая ошибка — (0, None)."""
+    req = urllib.request.Request(url, headers={"X-Dashboard-Token": token} if token else {})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status, json.loads(resp.read() or b"null")
+    except urllib.error.HTTPError as e:
+        try:
+            return e.code, json.loads(e.read() or b"null")
+        except ValueError:
+            return e.code, None
+    except (OSError, ValueError):
+        return 0, None
+
+
+def wait_risk_queue(base: str, token: str, timeout: float = 5.0) -> None:
+    """Дождаться, пока модуль рисков обработает очередь событий (meta.queue_size == 0)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        status, meta = get_json(f"{base}/api/risk/meta", token)
+        if status != 200 or not isinstance(meta, dict) or meta.get("queue_size", 0) == 0:
+            return
+        time.sleep(0.1)
+
+
+def attack_pumping(base: str, prefix: str = "99670073", count: int = 60, interval: float = 1.5,
+                   jitter: float = 0.5, client_ip: Optional[str] = None,
+                   token: Optional[str] = None, quiet: bool = False) -> dict:
+    """Только POST /otp/send на prefix+0000..count-1 подряд, без verify, с паузой interval±jitter."""
+    headers = {"X-Forwarded-For": client_ip} if client_ip else None
+    price, currency = 1.0, "сом"
+    if token:
+        status, meta = get_json(f"{base}/api/risk/meta", token)
+        if status == 200 and isinstance(meta, dict):
+            price, currency = float(meta.get("sms_price", 1.0)), meta.get("currency", currency)
+    stats: Counter = Counter()
+    sent = 0
+    if not quiet:
+        print(f"[pumping] IP {client_ip or '(без X-Forwarded-For)'}, номера {prefix}0000.."
+              f"{prefix}{count - 1:04d}, пауза {interval}±{jitter} с")
+    for i in range(count):
+        status, _ = post(f"{base}/otp/send", {"msisdn": f"{prefix}{i:04d}"}, headers)
+        stats[status] += 1
+        sent += status == 200
+        if not quiet:
+            print(f"\r  номер {i + 1}/{count} · отправлено SMS {sent} · ≈{sent * price:g} {currency}   ",
+                  end="", flush=True)
+        if i < count - 1 and interval > 0:
+            time.sleep(max(0.0, interval + random.uniform(-jitter, jitter)))
+    if not quiet:
+        print()
+    result = {"ip": client_ip or "127.0.0.1", "count": count, "sent": sent, "stats": dict(stats),
+              "price": price, "currency": currency, "risk": None, "first_high_at": None,
+              "trusts_forwarded": None}
+    if token:
+        wait_risk_queue(base, token)
+        status, detail = get_json(f"{base}/api/risk/ip?ip={result['ip']}", token)
+        if status == 200 and isinstance(detail, dict):
+            result["risk"] = detail
+            first = detail.get("first_high") or {}
+            result["first_high_at"] = first.get("at_number")
+        if client_ip:
+            _, rows = get_json(f"{base}/api/risk/ips?limit=200", token)
+            ips = {row.get("ip") for row in rows} if isinstance(rows, list) else set()
+            result["trusts_forwarded"] = not (client_ip not in ips and "127.0.0.1" in ips)
+    return result
+
+
+def report_pumping(result: dict, token: Optional[str]) -> bool:
+    """Честный вердикт по pumping. True — модуль рисков поднял тревогу high (или токена нет)."""
+    stats, sent, cur = result["stats"], result["sent"], result["currency"]
+    rejected = sum(v for k, v in stats.items() if k != 200)
+    print("\n=== Атака 3: SMS pumping — номера подряд, коды не вводятся ===")
+    print(f"  {'запросов send':<21}: {result['count']}")
+    print(f"  {'SMS выдано (200)':<21}: {sent}")
+    print(f"  {'отказов':<21}: {rejected} {dict((k, v) for k, v in stats.items() if k != 200) or ''}")
+    print(f"  {'оценка стоимости':<21}: ≈{sent * result['price']:g} {cur}")
+    if result["trusts_forwarded"] is False:
+        print("  ВНИМАНИЕ: сервер, похоже, не доверяет X-Forwarded-For — все события пришли с 127.0.0.1."
+              " Запустите сервер с OTP_TRUSTED_PROXIES=127.0.0.1.")
+    if not token:
+        print("  Токен админки не передан (--token): вердикт модуля рисков не запрошен.")
+        print("  Базовая защита не остановила рассылку (лимит send — только на номер).")
+        return True
+    risk = result["risk"]
+    if not risk:
+        print("  Модуль рисков не ответил по этому IP (выключен или IP не найден).")
+        return False
+    reasons = ", ".join(f"{r['name']}+{r['points']}" for r in risk.get("reasons", [])) or "—"
+    print(f"  {'модуль рисков':<21}: уровень {risk['level']}, балл {risk['score']} ({reasons})")
+    at = result["first_high_at"]
+    if risk["level"] == "high" and at:
+        rest = max(0, sent - at)
+        print(f"  Базовая защита не остановила рассылку (лимит send — только на номер). "
+              f"Модуль рисков обнаружил бота на {at}-м номере; в боевом режиме остальные {rest} SMS "
+              f"были бы отклонены, экономия ≈{rest * result['price']:g} {cur}.")
+        return True
+    print("  Базовая защита не остановила рассылку (лимит send — только на номер), "
+          "и модуль рисков не поднял тревогу high на этот IP.")
+    return False
+
+
+def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Brute-force атаки на OTP-сервис")
     p.add_argument("--url", default=os.getenv("OTP_URL", "http://127.0.0.1:8000"))
     p.add_argument("--attempts", type=int, default=1000, help="попыток на каждую атаку")
@@ -156,21 +269,47 @@ def main() -> int:
     p.add_argument("--numbers", type=int, default=50, help="номеров в распределённой атаке")
     p.add_argument("--outbox", default=DEFAULT_OUTBOX,
                    help="файл тестового SMS-транспорта сервиса")
-    p.add_argument("--only", choices=["single", "distributed"])
+    p.add_argument("--only", choices=["single", "distributed", "pumping"])
     p.add_argument("--pause", type=int, default=61,
                    help="пауза между атаками (сек), чтобы окно лимита по IP сбросилось")
-    args = p.parse_args()
+    pumping = p.add_argument_group("pumping (только с --only pumping)")
+    pumping.add_argument("--client-ip", help="отправлять X-Forwarded-For с этим IP")
+    pumping.add_argument("--range-prefix", default=PUMPING_DEFAULTS["range_prefix"],
+                         help="первые 8 цифр номеров (дальше 0000..count-1)")
+    pumping.add_argument("--count", type=int, default=PUMPING_DEFAULTS["count"], help="номеров")
+    pumping.add_argument("--interval", type=float, default=PUMPING_DEFAULTS["interval"],
+                         help="пауза между номерами, с")
+    pumping.add_argument("--jitter", type=float, default=PUMPING_DEFAULTS["jitter"],
+                         help="разброс паузы, ± с")
+    pumping.add_argument("--token", default=os.getenv("DASHBOARD_TOKEN"),
+                         help="токен админки, чтобы запросить вердикт модуля рисков")
+    return p
+
+
+def selected_attacks(only: Optional[str]) -> list[str]:
+    """Какие атаки запустить: по умолчанию — две старые; pumping — только явно."""
+    return [only] if only else ["single", "distributed"]
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    args = build_parser().parse_args(argv)
     base = args.url.rstrip("/")
+
+    if args.only == "pumping":
+        result = attack_pumping(base, args.range_prefix, args.count, args.interval, args.jitter,
+                                args.client_ip, args.token)
+        return 0 if report_pumping(result, args.token) else 1
 
     # случайный диапазон номеров, чтобы повторные запуски не упирались в лимиты send
     prefix = 996700000000 + random.randrange(0, 90_000_000, 100)
+    attacks = selected_attacks(args.only)
     ok = True
-    if args.only in (None, "single"):
+    if "single" in attacks:
         ok &= attack_single(base, args.attempts, args.workers, args.outbox, str(prefix))
     if args.only is None and args.pause > 0:
         print(f"\n... пауза {args.pause} с, чтобы сбросилось окно лимита по IP ...")
         time.sleep(args.pause)
-    if args.only in (None, "distributed"):
+    if "distributed" in attacks:
         numbers = [str(prefix + 1 + i) for i in range(args.numbers)]
         ok &= attack_distributed(base, args.attempts, args.workers, args.outbox, numbers)
 

@@ -160,6 +160,124 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .bar-cell { display: flex; align-items: center; gap: 8px; }
   .bar-cell .bar { height: 8px; border-radius: 0 4px 4px 0; background: var(--series-4); min-width: 2px; }
+
+  /* ---------- вкладка «Риски» ---------- */
+  [hidden] { display: none !important; }
+  .risk-tabs { display: inline-flex; gap: 4px; }
+  .risk-tabs .badge { margin-left: 6px; font-size: 11px; }
+  .risk-mode { font-size: 12px; color: var(--text-secondary); background: var(--surface-1); border: 1px dashed var(--border); border-radius: 8px; padding: 6px 10px; margin-bottom: 12px; }
+  .risk-notice strong { display: block; color: var(--critical-text); margin-bottom: 4px; }
+  .risk-status:empty { display: none; }
+  .risk-status { margin-top: 6px; }
+  .risk-sub { margin: -4px 0 8px; }
+  .tile .value.risk-value-sm { font-size: 20px; }
+  .risk-big::before { width: 14px; height: 14px; }
+  .risk-filter { display: inline-flex; gap: 4px; font-weight: 400; }
+  .risk-row { cursor: pointer; }
+  .risk-row:hover td, .risk-row[aria-selected="true"] td { background: var(--grid); }
+  .risk-row:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
+  .risk-chips { margin-bottom: 0; gap: 4px; }
+  .risk-chip { font-size: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; color: var(--text-secondary); white-space: nowrap; }
+  .risk-now { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+  .risk-spark { width: 60px; height: 16px; display: block; color: var(--text-secondary); }
+  .risk-tag { font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; margin-left: 6px; color: var(--text-secondary); white-space: nowrap; }
+  .risk-link { font: inherit; background: none; border: none; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; }
+  .risk-detail-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 4px; }
+  .risk-detail-head .risk-ip { font-size: 18px; font-weight: 650; }
+  .risk-scale { position: relative; margin: 14px 0 26px; }
+  .risk-breakdown { position: relative; height: 28px; border-radius: 6px; background: var(--grid); overflow: hidden; }
+  .risk-seg { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--surface-1); border-right: 2px solid var(--surface-1); overflow: hidden; white-space: nowrap; }
+  .risk-seg.risk-over { opacity: .35; }
+  .risk-mark { position: absolute; top: -4px; height: 36px; border-left: 2px dashed var(--text-secondary); }
+  .risk-mark span { position: absolute; top: 38px; left: -2px; transform: translateX(-50%); font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+  .risk-reasons { list-style: none; margin: 0; padding: 0; }
+  .risk-reasons li { display: flex; gap: 10px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--grid); }
+  .risk-reasons i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex: none; }
+  .risk-reasons b { min-width: 150px; font-weight: 600; }
+  .risk-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 12px 0; }
+  .risk-stat { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+  .risk-stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .risk-stat span { color: var(--text-secondary); font-size: 12px; }
+  .risk-alert { border: 1px solid var(--border); border-left: 4px solid var(--c); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .risk-alert-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 2px; }
+  .risk-new { animation: risk-flash 2.5s ease-out; }
+  @keyframes risk-flash { from { box-shadow: 0 0 0 3px var(--warning); } to { box-shadow: 0 0 0 0 transparent; } }
+  .risk-footer { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-muted); }
+  .risk-tip-title { font-weight: 600; margin-bottom: 4px; }
+  /* Шрифты как во вкладке «Журнал»: акцент — начертанием и цветом, не размером.
+     Тема задаёт засечный шрифт для h1/h2 и значений плиток — во вкладке «Риски» и окне везде системный. */
+  #tab-risk h2, #tab-risk h3, #tab-risk .tile .value, #risk-dialog h2 { font-family: inherit; }
+  #tab-risk button, #tab-risk select, #tab-risk input { font-family: inherit; }
+  .risk-dialog, .risk-dialog button { font: inherit; }
+  .risk-dialog button { font-size: 13px; }
+  .tile.risk-tile-key { border-color: color-mix(in srgb, var(--critical) 45%, var(--border)); background: color-mix(in srgb, var(--critical) 6%, var(--surface-1)); }
+  .tile.risk-tile-key .value { color: var(--critical-text); }
+  .tile .risk-tile-note { color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+  .risk-sources-list { display: grid; gap: 10px; }
+  .risk-source-card { border: 1px solid var(--border); border-left: 4px solid var(--c); border-radius: 10px; padding: 10px 14px; cursor: pointer; background: color-mix(in srgb, var(--c) 5%, var(--surface-1)); }
+  .risk-source-card:hover, .risk-source-card[aria-current="true"] { border-color: var(--c); }
+  .risk-source-card:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+  .risk-source-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+  .risk-source-head .risk-ip { font-weight: 700; }
+  .risk-verdict { font-weight: 700; margin-left: auto; white-space: nowrap; }
+  .risk-kind { font-weight: 600; margin: 2px 0 6px; }
+  .risk-kind span { color: var(--text-secondary); font-weight: 400; }
+  .risk-meter { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; margin: 2px 0 8px; }
+  .risk-meter i { display: block; height: 100%; background: var(--c); }
+  .risk-bullets { margin: 0 0 6px; padding-left: 18px; font-size: 13px; color: var(--text-secondary); }
+  .risk-bullets li { margin: 1px 0; }
+  .risk-bullets b { color: var(--text-primary); font-weight: 600; }
+  .risk-source-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13px; }
+  .risk-source-foot .spacer { flex: 1; }
+  .risk-quiet { color: var(--text-muted); font-size: 12px; }
+  .risk-lowlist { margin-top: 10px; font-size: 13px; color: var(--text-secondary); }
+  .risk-lowlist summary { cursor: pointer; width: max-content; }
+  .risk-alert { background: color-mix(in srgb, var(--c) 8%, transparent); border-left-width: 4px; }
+  .risk-alert-head { font-weight: 600; }
+  .risk-alert-body { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+  .risk-alert-action { font-size: 13px; margin-top: 2px; }
+  .risk-tech { margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
+  .risk-tech summary { cursor: pointer; width: max-content; margin-bottom: 6px; }
+
+  /* ---------- окно «Почему такой риск?» ---------- */
+  .risk-dialog { width: min(680px, 92vw); max-height: 85vh; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); color: var(--text-primary); overflow: hidden; }
+  .risk-dialog[open] { display: flex; flex-direction: column; }
+  .risk-dialog::backdrop { background: color-mix(in srgb, var(--text-primary) 45%, transparent); }
+  @supports (backdrop-filter: blur(4px)) { .risk-dialog::backdrop { backdrop-filter: blur(4px); } }
+  .risk-dialog-head { position: relative; padding: 14px 52px 10px 18px; border-bottom: 1px solid var(--border); background: var(--surface-1); }
+  .risk-dialog-head h2 { margin: 0; }
+  .risk-dialog-kicker { color: var(--text-secondary); font-size: 12px; }
+  .risk-dialog-sub { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-top: 6px; font-size: 13px; color: var(--text-secondary); }
+  .risk-dialog-sub .badge { color: var(--text-primary); font-weight: 600; }
+  .risk-dialog-close { position: absolute; top: 12px; right: 14px; }
+  .risk-dialog-body { overflow-y: auto; padding: 14px 18px 18px; }
+  .risk-dialog-body h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; }
+  .risk-verdict-block { border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; background: color-mix(in srgb, var(--c) 8%, transparent); }
+  .risk-verdict-block.risk-neutral { background: var(--grid); }
+  .risk-verdict-label { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 2px; }
+  .risk-dialog .tiles { margin: 12px 0 0; }
+  .risk-scorebar { height: 10px; border-radius: 5px; background: var(--grid); overflow: hidden; }
+  .risk-scorebar i { display: block; height: 100%; background: var(--c); }
+  .risk-scoreticks { position: relative; height: 16px; font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
+  .risk-scoreticks span { position: absolute; top: 2px; transform: translateX(-50%); white-space: nowrap; border-left: 1px solid var(--text-muted); padding-left: 3px; }
+  .risk-weights { display: grid; grid-template-columns: max-content 3.5em 1fr; gap: 4px 10px; align-items: baseline; }
+  .risk-weights .mono { text-align: right; }
+  .risk-weights .risk-why-detail { color: var(--text-secondary); font-size: 13px; }
+  @media (max-width: 560px) {
+    .risk-weights { grid-template-columns: 1fr 3.5em; }
+    .risk-weights .risk-why-detail { grid-column: 1 / -1; margin-top: -2px; }
+  }
+  .risk-timeline td { white-space: nowrap; }
+  .risk-timeline td.risk-wrap { white-space: normal; }
+  .risk-result { font-weight: 600; }
+  .risk-result .mono { color: var(--text-muted); font-weight: 400; margin-left: 6px; font-size: 11px; }
+  .risk-skip td { color: var(--text-muted); font-style: italic; }
+  .risk-counters { margin-top: 14px; font-size: 13px; }
+  .risk-counters summary { cursor: pointer; width: max-content; }
+  .risk-counters dl { display: grid; grid-template-columns: max-content max-content; gap: 2px 16px; margin: 8px 0 0; }
+  .risk-counters dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .risk-counters .risk-zero { color: var(--text-muted); }
+  .risk-stale { color: var(--critical-text); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -171,11 +289,16 @@
   <svg class="waves" viewBox="0 0 1200 26" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14C150 2 300 26 450 14S750 2 900 14s200 12 300 0V26H0z" fill="var(--wave-1)"/><path d="M0 19C200 10 350 26 600 19s400-9 600 1V26H0z" fill="var(--wave-2)"/></svg>
   <div class="hero">
     <h1>Журнал безопасности OTP</h1>
+    <div class="risk-tabs" role="tablist" aria-label="Разделы админки">
+      <button id="tabbtn-security" role="tab" aria-selected="true" aria-pressed="true" aria-controls="tab-security" tabindex="0">Журнал</button>
+      <button id="tabbtn-risk" role="tab" aria-selected="false" aria-pressed="false" aria-controls="tab-risk" tabindex="-1">Риски<span class="badge s-critical" id="risk-count" hidden></span></button>
+    </div>
     <span class="meta" id="meta">загрузка…</span>
     <span class="spacer"></span>
     <button id="live" aria-pressed="true"><span class="live-dot"></span>Обновление: вкл</button>
   </div>
 
+  <div id="tab-security" role="tabpanel" aria-labelledby="tabbtn-security">
   <section class="tiles" id="tiles"></section>
 
   <section class="card">
@@ -206,6 +329,100 @@
     <div class="chips" id="filters"></div>
     <div class="scroll" id="events"></div>
   </section>
+  </div>
+
+  <div id="tab-risk" role="tabpanel" aria-labelledby="tabbtn-risk" hidden>
+    <div class="card risk-notice" id="risk-notice" role="alert" hidden></div>
+    <div id="risk-body">
+      <div class="risk-mode" id="risk-mode" hidden><strong>Режим наблюдения.</strong> Система обнаруживает атаки и показывает, что заблокировала бы в боевом режиме. Ответы сервиса не меняются.</div>
+
+      <section class="tiles" id="risk-tiles"><div class="empty">Загрузка…</div></section>
+      <div class="details err risk-status" id="risk-st-overview"></div>
+
+      <section class="card" aria-labelledby="risk-sources-title">
+        <h2 id="risk-sources-title">Источники атак</h2>
+        <div id="risk-sources"><div class="empty">Загрузка…</div></div>
+        <details class="risk-lowlist" id="risk-lowlist" hidden>
+          <summary id="risk-lowlist-title"></summary>
+          <div class="scroll" id="risk-lowlist-table"></div>
+        </details>
+        <div class="details err risk-status" id="risk-st-ips"></div>
+      </section>
+
+      <section class="card">
+        <h2>Журнал срабатываний защиты</h2>
+        <div id="risk-alerts"><div class="empty">Загрузка…</div></div>
+        <div class="details err risk-status" id="risk-st-alerts"></div>
+      </section>
+
+      <section class="card" id="risk-summary-card">
+        <h2>Сводка инцидента <span class="spacer"></span>
+          <button type="button" id="risk-summary-btn">Сводка за 10 минут</button></h2>
+        <div id="risk-summary"><div class="empty">Нажмите кнопку — система соберёт сводку по инцидентам за 10 минут.</div></div>
+        <div class="details risk-status" id="risk-summary-meta"></div>
+        <details class="risk-source" id="risk-summary-source" hidden>
+          <summary>показать исходные данные</summary>
+          <pre class="mono risk-source-data" id="risk-summary-data"></pre>
+        </details>
+        <div class="details err risk-status" id="risk-st-summary"></div>
+      </section>
+
+      <div class="grid2">
+        <section class="card">
+          <h2>Запросы по уровню риска, по минутам</h2>
+          <div class="details risk-sub">Цвет — уровень риска источника в момент запроса. Время по Бишкеку.</div>
+          <div class="legend" id="risk-timeline-legend"></div>
+          <div class="chart-box" id="risk-timeline-box">
+            <svg class="chart" id="risk-timeline-svg" role="img" aria-label="Столбцы запросов по минутам, сложенные по уровням риска"></svg>
+            <div class="tooltip" id="risk-timeline-tip"></div>
+          </div>
+          <div class="details err risk-status" id="risk-st-timeline"></div>
+        </section>
+        <section class="card">
+          <h2>Как бот перебирает номера <span class="spacer"></span>
+            <span class="risk-filter" id="risk-scatter-window" role="group" aria-label="Окно графика">
+              <button type="button" data-window="300" aria-pressed="true">5 мин</button>
+              <button type="button" data-window="1800" aria-pressed="false">30 мин</button>
+            </span></h2>
+          <div class="details risk-sub">Люди — случайные точки. Бот, идущий по номерам подряд, рисует линию.</div>
+          <div class="legend" id="risk-scatter-legend"></div>
+          <div class="chart-box" id="risk-scatter-box">
+            <svg class="chart" id="risk-scatter-svg" role="img" aria-label="Точечная диаграмма: время и последние 4 цифры номера"></svg>
+            <div class="tooltip" id="risk-scatter-tip"></div>
+          </div>
+          <div class="details err risk-status" id="risk-st-scatter"></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2>Кто на какие номера запрашивал коды</h2>
+        <div class="details risk-sub">Звезда — один IP рассылает коды на много номеров.</div>
+        <div class="legend" id="risk-graph-legend"></div>
+        <div class="chart-box" id="risk-graph-box">
+          <svg class="chart risk-graph" id="risk-graph-svg" role="img" aria-label="Граф связей IP-адресов и номеров"></svg>
+          <div class="tooltip" id="risk-graph-tip"></div>
+        </div>
+        <div class="details risk-status" id="risk-graph-note"></div>
+        <div class="details err risk-status" id="risk-st-graph"></div>
+      </section>
+
+      <dialog class="risk-dialog" id="risk-dialog" aria-labelledby="risk-dialog-title">
+        <div class="risk-dialog-head">
+          <div class="risk-dialog-kicker" id="risk-dialog-kicker"></div>
+          <h2 id="risk-dialog-title">Загрузка…</h2>
+          <button type="button" class="risk-dialog-close" id="risk-dialog-close" aria-label="Закрыть">✕</button>
+          <div class="risk-dialog-sub" id="risk-dialog-sub"></div>
+        </div>
+        <div class="risk-dialog-body" id="risk-dialog-body"></div>
+      </dialog>
+
+      <details class="risk-tech" id="risk-tech">
+        <summary>Технические детали <span class="badge s-warning" id="risk-tech-warn" hidden>есть потери событий</span></summary>
+        <footer class="risk-footer" id="risk-footer"></footer>
+        <div class="details err risk-status" id="risk-st-meta"></div>
+      </details>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -406,8 +623,948 @@
   }
 
   load();
-  setInterval(() => { if (live && !document.hidden) load(); }, 2000);
+  // журнал опрашивается, только пока открыта его вкладка; при возврате на неё — сразу
+  setInterval(() => { if (live && !document.hidden && !$("tab-security").hidden) load(); }, 2000);
+  window.addEventListener("otp-dashboard-tab", e => { if (e.detail === "security" && live) load(); });
   window.addEventListener("resize", () => data && renderChart());
+})();
+</script>
+<script id="risk-script">
+/* Вкладка «Риски». Данные API выводятся только через textContent / createElement. */
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const token = new URLSearchParams(location.search).get("token");
+  const FAST_MS = 2000, SLOW_MS = 5000, MAX_ALERTS = 100, MAX_POINTS = 3000, FLASH_MS = 2500;
+  const DETAIL_EVENTS = 20;
+  const EMPTY_TEXT = "Пока нет данных — запустите attack.py";
+
+  // Уровни: цвет всегда вместе с текстом
+  const LEVELS = {
+    low:    { name: "Низкий",  badge: "s-good",     color: "var(--good)" },
+    medium: { name: "Средний", badge: "s-warning",  color: "var(--warning)" },
+    high:   { name: "Критический", badge: "s-critical", color: "var(--critical)" },
+  };
+  const LEVEL_KEYS = ["low", "medium", "high"];
+  const lvl = level => LEVELS[level] || LEVELS.low;
+  // Названия признаков приходят из API (reason.title); здесь — только запасной вариант
+  const signalTitle = r => r.title || r.name;
+  const EVENTS = {
+    send_ok: "Код отправлен", send_rejected: "Отправка отклонена лимитом", verify_ok: "Код подтверждён",
+    verify_fail: "Неверный код", verify_expired: "Код истёк", number_blocked: "Номер заблокирован",
+    verify_locked: "Проверка номера в блоке", ip_rate_limited: "Лимит проверок",
+    bad_request: "Неверный запрос", store_unavailable: "Хранилище недоступно",
+  };
+  const SEND_REASONS = { cooldown: "слишком частый запрос", limit: "лимит отправок на номер",
+    blocked: "номер в блоке", frozen: "владелец заморозил коды" };
+  const ACTION_FULL = { high: "блокировка запросов с этого IP", medium: "замедление запросов с этого IP" };
+  const plural = (n, one, few, many) => {
+    const a = Math.abs(n) % 100, b = a % 10;
+    return a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many;
+  };
+  const capital = t => t ? t[0].toUpperCase() + t.slice(1) : t;
+  const riskText = score => `Риск ${score} / 100`;
+  const SEG_COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-4)", "var(--series-3)"];
+
+  // ---------- форматирование: время всегда по Бишкеку ----------
+  const tz = { timeZone: "Asia/Bishkek" };
+  const fHM = new Intl.DateTimeFormat("ru-RU", { ...tz, hour: "2-digit", minute: "2-digit" });
+  const fHMS = new Intl.DateTimeFormat("ru-RU", { ...tz, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const fDT = new Intl.DateTimeFormat("ru-RU", { ...tz, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const hm = s => fHM.format(new Date(s * 1000));
+  const hms = s => fHMS.format(new Date(s * 1000));
+  const dt = s => fDT.format(new Date(s * 1000));
+  const num = n => Number(n || 0).toLocaleString("ru-RU");
+  const tail4 = t => String(t).padStart(4, "0");
+
+  // ---------- DOM ----------
+  function el(tag, props, ...children) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props || {})) {
+      if (value == null || value === false) continue;
+      if (key === "class") node.className = value;
+      else if (key === "text") node.textContent = value;
+      else if (key === "style") Object.assign(node.style, value);
+      else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+      else node.setAttribute(key, value === true ? "" : String(value));
+    }
+    for (const child of children.flat()) {
+      if (child == null || child === false) continue;
+      node.append(child instanceof Node ? child : String(child));
+    }
+    return node;
+  }
+  function svgEl(tag, attrs, text) {
+    const node = document.createElementNS(SVG_NS, tag);
+    for (const [key, value] of Object.entries(attrs || {})) node.setAttribute(key, String(value));
+    if (text != null) node.textContent = text;
+    return node;
+  }
+  const levelBadge = (level, extraClass) =>
+    el("span", { class: `badge ${lvl(level).badge}${extraClass ? " " + extraClass : ""}`, text: lvl(level).name });
+  const empty = text => el("div", { class: "empty", text: text || EMPTY_TEXT });
+  function niceMax(v) {
+    if (v <= 4) return 4;
+    const p = Math.pow(10, Math.floor(Math.log10(v)));
+    for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p;
+    return 10 * p;
+  }
+
+  // ---------- состояние ----------
+  const state = {
+    tab: "security", now: null,
+    overview: null, ips: null, timeline: null, scatter: null, meta: null, detail: null,
+    alerts: [], lastAlertId: 0, alertsLoaded: false, alertsDirty: false, scatterShown: [],
+    scatterWindow: 300, graph: null, graphNodes: [], summaryBusy: false, unseen: 0, fresh: new Map(),
+    selected: null, detailMissing: false, fatal: null, opener: null, countersOpen: false,
+    busyFast: false, busySlow: false, busyCount: false,
+  };
+
+  // ---------- API ----------
+  class ApiError extends Error {
+    constructor(kind, status) { super(kind); this.kind = kind; this.status = status; }
+  }
+  async function api(path, params) {
+    const url = new URL(path, location.origin);
+    for (const [key, value] of Object.entries(params || {})) url.searchParams.set(key, value);
+    let res;
+    try {
+      res = await fetch(url, { cache: "no-store", headers: token ? { "X-Dashboard-Token": token } : {} });
+    } catch (e) {
+      throw new ApiError("network", 0);
+    }
+    let body = null;
+    try { body = await res.json(); } catch (e) { body = null; }
+    if (res.ok) return body;
+    if (res.status === 401) throw new ApiError("auth", 401);
+    if (res.status === 503 && body && body.status === "risk_disabled") throw new ApiError("disabled", 503);
+    if (res.status === 404) throw new ApiError("not_found", 404);
+    throw new ApiError("error", res.status);
+  }
+
+  function setFatal(kind) {
+    if (state.fatal === kind) return;
+    state.fatal = kind;
+    const box = $("risk-notice");
+    if (!kind) { box.hidden = true; $("risk-body").hidden = false; return; }
+    const auth = kind === "auth";
+    box.replaceChildren(
+      el("strong", { text: auth ? "Нужен токен админки (?token=...)" : "Модуль рисков выключен (RISK_ENABLED=0)" }),
+      el("div", { class: "details", text: auth
+        ? "Откройте страницу как /dashboard?token=<DASHBOARD_TOKEN>#risk."
+        : "Вкладка «Журнал» работает как обычно. Включите модуль и перезапустите сервис." }));
+    box.hidden = false;
+    $("risk-body").hidden = true;
+  }
+
+  // Загрузка одного блока: ошибка блока не ломает остальные
+  async function guard(block, fetcher, apply, retryMs) {
+    const status = $("risk-st-" + block);
+    try {
+      const data = await fetcher();
+      setFatal(null);
+      if (status) status.textContent = "";
+      apply(data);
+    } catch (e) {
+      const kind = e instanceof ApiError ? e.kind : "error";
+      if (kind === "auth" || kind === "disabled") { setFatal(kind); return; }
+      if (kind === "not_found" && block === "detail") { state.detailMissing = true; renderDetail(); return; }
+      if (status) status.textContent = `Нет данных, повторим через ${Math.round(retryMs / 1000)} с`;
+      if (!(e instanceof ApiError)) console.error(e);
+    }
+  }
+
+  // ---------- 1–2. Плашка режима и плитки ----------
+  function renderTiles() {
+    const o = state.overview;
+    if (!o) return;
+    const tile = (label, value, sub, opts) => el("div", { class: "tile" + (opts && opts.key ? " risk-tile-key" : "") },
+      el("div", { class: "label", text: label }),
+      el("div", { class: "value" + (opts && opts.small ? " risk-value-sm" : "") }, value),
+      el("div", { class: opts && opts.note ? "risk-tile-note" : "sub", text: sub || " " }));
+    const high = o.ips_high, medium = o.ips_medium;
+    const sources = high || medium
+      ? [high ? `${num(high)} ${plural(high, "критический", "критических", "критических")}` : null,
+         medium ? `${num(medium)} ${plural(medium, "средний", "средних", "средних")}` : null].filter(Boolean).join(" · ")
+      : "нет";
+    const conversion = o.conversion == null ? "—"
+      : (o.conversion * 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 }) + "%";
+    $("risk-tiles").replaceChildren(
+      tile("Уровень угрозы", levelBadge(o.threat_level, "risk-big"), "за последний час", { small: true }),
+      tile("Источники атак", sources, `из ${num(o.ips_active)} активных IP`, { small: true }),
+      tile("Срабатывания защиты", num(o.alerts), "за час"),
+      tile("Потрачено на ботов", `≈${num(o.sms_cost_suspicious)} ${o.currency}`,
+        `${num(o.sms_suspicious)} из ${num(o.sms_sent)} SMS`, { key: true, note: true }),
+      tile("SMS подтверждено", conversion, "у людей обычно 70–90%"),
+    );
+  }
+
+  // ---------- 3. Динамика риска ----------
+  function renderTimeline() {
+    const rows = state.timeline, svg = $("risk-timeline-svg");
+    if (!rows) return;
+    const W = svg.clientWidth || 560, H = 220, padL = 36, padR = 4, padT = 8, padB = 22;
+    const cw = W - padL - padR, ch = H - padT - padB;
+    const totals = rows.map(r => LEVEL_KEYS.reduce((a, k) => a + (r[k] || 0), 0));
+    const max = niceMax(Math.max(...totals, 1));
+    const step = cw / Math.max(1, rows.length), bw = Math.max(1, Math.min(18, step * 0.7));
+    const y = v => padT + ch - (v / max) * ch;
+    const nodes = [];
+    for (let i = 0; i <= 4; i++) {
+      const v = max * i / 4, yy = y(v);
+      nodes.push(svgEl("line", { x1: padL, x2: W - padR, y1: yy, y2: yy, stroke: "var(--grid)", "stroke-width": 1 }));
+      nodes.push(svgEl("text", { x: padL - 6, y: yy + 4, "text-anchor": "end" }, num(v)));
+    }
+    rows.forEach((r, i) => {
+      const x = padL + i * step + (step - bw) / 2;
+      let acc = 0;
+      for (const key of LEVEL_KEYS) {
+        const v = r[key] || 0;
+        if (!v) continue;
+        const y0 = y(acc), y1 = y(acc + v);
+        acc += v;
+        nodes.push(svgEl("rect", { x, y: y1, width: bw, height: Math.max(1, y0 - y1), fill: lvl(key).color }));
+      }
+      if (r.t % 600 === 0)
+        nodes.push(svgEl("text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle" }, hm(r.t)));
+      nodes.push(svgEl("rect", { "data-i": i, x: padL + i * step, y: padT, width: step, height: ch, fill: "transparent" }));
+    });
+    nodes.push(svgEl("line", { x1: padL, x2: W - padR, y1: y(0), y2: y(0), stroke: "var(--border)", "stroke-width": 1 }));
+    if (totals.every(t => !t))
+      nodes.push(svgEl("text", { x: padL + cw / 2, y: padT + ch / 2, "text-anchor": "middle" }, EMPTY_TEXT));
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.replaceChildren(...nodes);
+  }
+
+  function showTip(tip, box, e, children) {
+    tip.replaceChildren(...children);
+    tip.style.display = "block";
+    const rect = box.getBoundingClientRect();
+    let left = e.clientX - rect.left + 14;
+    if (left + tip.offsetWidth > rect.width) left = e.clientX - rect.left - tip.offsetWidth - 14;
+    tip.style.left = Math.max(0, left) + "px";
+    tip.style.top = Math.max(0, e.clientY - rect.top - 20) + "px";
+  }
+  const tipRow = (color, label, value) => el("div", { class: "row" },
+    el("span", null, color ? el("i", { style: { background: color } }) : null, label),
+    el("span", { text: value }));
+
+  $("risk-timeline-svg").addEventListener("mousemove", e => {
+    const hit = e.target.closest("[data-i]"), tip = $("risk-timeline-tip");
+    const r = hit && state.timeline && state.timeline[+hit.getAttribute("data-i")];
+    if (!r) { tip.style.display = "none"; return; }
+    showTip(tip, $("risk-timeline-box"), e, [
+      el("div", { class: "risk-tip-title", text: `${hm(r.t)}–${hm(r.t + 60)} по Бишкеку` }),
+      ...LEVEL_KEYS.slice().reverse().map(k => tipRow(lvl(k).color, `события IP, уровень «${lvl(k).name}»`, num(r[k]))),
+    ]);
+  });
+  $("risk-timeline-svg").addEventListener("mouseleave", () => { $("risk-timeline-tip").style.display = "none"; });
+
+  // ---------- 4. «Подметание» ----------
+  function renderScatter() {
+    const all = state.scatter, svg = $("risk-scatter-svg");
+    if (!all) return;
+    const points = all.length > MAX_POINTS ? all.slice(-MAX_POINTS) : all;
+    const W = svg.clientWidth || 560, H = 220, padL = 40, padR = 8, padT = 8, padB = 22;
+    const WINDOW = state.scatterWindow, tick = WINDOW <= 600 ? 60 : 300;
+    const cw = W - padL - padR, ch = H - padT - padB;
+    const lastT = points.length ? points[points.length - 1].t : 0;
+    const t1 = Math.max(state.now || 0, lastT) || Date.now() / 1000, t0 = t1 - WINDOW;
+    const x = t => padL + Math.min(1, Math.max(0, (t - t0) / WINDOW)) * cw;
+    const y = tail => padT + ch - (tail / 9999) * ch;
+    const nodes = [];
+    for (const v of [0, 2500, 5000, 7500, 9999]) {
+      nodes.push(svgEl("line", { x1: padL, x2: W - padR, y1: y(v), y2: y(v), stroke: "var(--grid)", "stroke-width": 1 }));
+      nodes.push(svgEl("text", { x: padL - 6, y: y(v) + 4, "text-anchor": "end" }, tail4(v)));
+    }
+    if (t1) for (let t = Math.ceil(t0 / tick) * tick; t <= t1; t += tick)
+      nodes.push(svgEl("text", { x: x(t), y: H - 6, "text-anchor": "middle" }, hm(t)));
+    nodes.push(svgEl("line", { x1: padL, x2: W - padR, y1: y(0), y2: y(0), stroke: "var(--border)", "stroke-width": 1 }));
+    // высокий уровень рисуется поверх
+    const order = points.map((p, i) => i).sort((a, b) =>
+      (LEVEL_KEYS.indexOf(points[a].level) - LEVEL_KEYS.indexOf(points[b].level)) || a - b);
+    for (const i of order) {
+      const p = points[i], color = lvl(p.level).color, rejected = p.event === "send_rejected";
+      nodes.push(svgEl("circle", {
+        "data-i": i, cx: x(p.t), cy: y(p.tail), r: 3.5,
+        fill: rejected ? "none" : color, stroke: color, "stroke-width": rejected ? 1.5 : 0.5,
+      }));
+    }
+    if (!points.length)
+      nodes.push(svgEl("text", { x: padL + cw / 2, y: padT + ch / 2, "text-anchor": "middle" }, EMPTY_TEXT));
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.replaceChildren(...nodes);
+    svg.dataset.count = String(points.length);
+    state.scatterShown = points;
+  }
+
+  $("risk-scatter-svg").addEventListener("mousemove", e => {
+    const hit = e.target.closest("circle[data-i]"), tip = $("risk-scatter-tip");
+    const p = hit && state.scatterShown && state.scatterShown[+hit.getAttribute("data-i")];
+    if (!p) { tip.style.display = "none"; return; }
+    showTip(tip, $("risk-scatter-box"), e, [
+      el("div", { class: "risk-tip-title", text: `${hms(p.t)} по Бишкеку` }),
+      tipRow(null, "IP", p.ip), tipRow(null, "последние 4 цифры", tail4(p.tail)),
+      tipRow(null, "событие", EVENTS[p.event] || p.event), tipRow(lvl(p.level).color, "уровень IP", lvl(p.level).name),
+    ]);
+  });
+  $("risk-scatter-svg").addEventListener("mouseleave", () => { $("risk-scatter-tip").style.display = "none"; });
+
+  const fetchScatter = () => api("/api/risk/scatter", { window: state.scatterWindow });
+  $("risk-scatter-window").addEventListener("click", e => {
+    const b = e.target.closest("button[data-window]");
+    if (!b) return;
+    state.scatterWindow = Number(b.getAttribute("data-window"));
+    $("risk-scatter-window").querySelectorAll("button").forEach(x =>
+      x.setAttribute("aria-pressed", String(x === b)));
+    renderScatter();
+    guard("scatter", fetchScatter, d => { state.scatter = d; renderScatter(); }, SLOW_MS);
+  });
+
+  // ---------- граф «IP → номера»: детерминированная раскладка без физики ----------
+  function layoutGraph(graph, W, H) {
+    const ips = graph.nodes.filter(n => n.type === "ip");
+    const numbers = graph.nodes.filter(n => n.type === "number");
+    const byNumber = new Map();
+    for (const edge of graph.edges) {
+      if (!byNumber.has(edge.target)) byNumber.set(edge.target, []);
+      byNumber.get(edge.target).push(edge.source);
+    }
+    // IP — на сетке, самые опасные первыми (API уже отсортировал по баллу)
+    const cols = Math.max(1, Math.min(ips.length, Math.round(Math.sqrt(ips.length * W / H))));
+    const rows = Math.max(1, Math.ceil(ips.length / cols));
+    const cw = W / cols, ch = H / rows, pos = new Map();
+    ips.forEach((n, i) => pos.set(n.id, { x: cw * (i % cols + 0.5), y: ch * (Math.floor(i / cols) + 0.5) }));
+    // номера одного IP — по окружности вокруг него; общий номер нескольких IP — между ними
+    const ring = new Map();
+    for (const n of numbers) {
+      const owners = byNumber.get(n.id) || [];
+      if (owners.length === 1) {
+        if (!ring.has(owners[0])) ring.set(owners[0], []);
+        ring.get(owners[0]).push(n);
+      } else if (owners.length > 1) {
+        const pts = owners.map(o => pos.get(o)).filter(Boolean);
+        const x = pts.reduce((a, p) => a + p.x, 0) / pts.length;
+        const y = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+        pos.set(n.id, { x, y: y + 14 });
+      }
+    }
+    const radius = Math.max(18, Math.min(cw, ch) * 0.36);
+    for (const [owner, list] of ring) {
+      const c = pos.get(owner);
+      if (!c) continue;
+      const r = list.length === 1 ? Math.min(radius, 28) : radius;
+      if (list.length > 1) c.ring = r;  // подпись IP — под кольцом номеров
+      list.forEach((n, i) => {
+        const a = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(1, list.length);
+        pos.set(n.id, { x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) });
+      });
+    }
+    return pos;
+  }
+
+  function renderGraph() {
+    const graph = state.graph, svg = $("risk-graph-svg");
+    if (!graph) return;
+    const W = svg.clientWidth || 900, H = 360;
+    const nodes = [], pos = layoutGraph(graph, W, H - 10);
+    state.graphNodes = graph.nodes;
+    const index = new Map(graph.nodes.map((n, i) => [n.id, i]));
+    for (const edge of graph.edges) {
+      const a = pos.get(edge.source), b = pos.get(edge.target);
+      if (!a || !b) continue;
+      const target = graph.nodes[index.get(edge.target)];
+      nodes.push(svgEl("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: lvl(target.level).color,
+        "stroke-opacity": 0.45, "stroke-width": edge.fails ? 1.5 : 1 }));
+    }
+    graph.nodes.forEach((n, i) => {
+      const p = pos.get(n.id);
+      if (!p || n.type !== "number") return;
+      nodes.push(svgEl("circle", { "data-n": i, cx: p.x, cy: p.y, r: 3.5, fill: lvl(n.level).color }));
+    });
+    graph.nodes.forEach((n, i) => {
+      const p = pos.get(n.id);
+      if (!p || n.type !== "ip") return;
+      const r = 6 + (n.score || 0) / 100 * 10;
+      nodes.push(svgEl("circle", { "data-n": i, class: "risk-node-ip", tabindex: 0, role: "button",
+        "aria-label": `IP ${n.label}, балл ${n.score}, уровень ${lvl(n.level).name}`,
+        cx: p.x, cy: p.y, r, fill: lvl(n.level).color, stroke: "var(--surface-1)", "stroke-width": 2 }));
+      nodes.push(svgEl("text", { x: p.x, y: p.y + Math.max(r, (p.ring || 0) + 4) + 12, "text-anchor": "middle" }, n.label));
+    });
+    if (!graph.nodes.length)
+      nodes.push(svgEl("text", { x: W / 2, y: H / 2, "text-anchor": "middle" }, EMPTY_TEXT));
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.replaceChildren(...nodes);
+    const ipCount = graph.nodes.filter(n => n.type === "ip").length;
+    $("risk-graph-note").textContent = graph.nodes.length
+      ? `IP: ${ipCount}, номеров: ${graph.nodes.length - ipCount}, связей: ${graph.edges.length}` +
+        (graph.truncated ? " · показаны самые опасные IP и первые номера" : "")
+      : "";
+  }
+
+  function graphNodeStats(node) {
+    const edges = state.graph.edges.filter(e => e.source === node.id || e.target === node.id);
+    return edges.reduce((a, e) => ({ sends: a.sends + e.sends, verifies: a.verifies + e.verifies,
+      fails: a.fails + e.fails, links: a.links + 1 }), { sends: 0, verifies: 0, fails: 0, links: 0 });
+  }
+  $("risk-graph-svg").addEventListener("mousemove", e => {
+    const hit = e.target.closest("[data-n]"), tip = $("risk-graph-tip");
+    const n = hit && state.graphNodes[+hit.getAttribute("data-n")];
+    if (!n) { tip.style.display = "none"; return; }
+    const st = graphNodeStats(n);
+    const rows = n.type === "ip"
+      ? [tipRow(lvl(n.level).color, "уровень", `${lvl(n.level).name}, балл ${n.score}`),
+         tipRow(null, "номеров", num(st.links))]
+      : [tipRow(lvl(n.level).color, "IP к номеру", num(st.links))];
+    showTip(tip, $("risk-graph-box"), e, [
+      el("div", { class: "risk-tip-title" + (n.type === "number" ? " mono" : ""),
+        text: n.type === "ip" ? `IP ${n.label}` : n.label }),
+      ...rows, tipRow(null, "отправок", num(st.sends)), tipRow(null, "проверок", num(st.verifies)),
+      tipRow(null, "из них неудачных", num(st.fails)),
+    ]);
+  });
+  $("risk-graph-svg").addEventListener("mouseleave", () => { $("risk-graph-tip").style.display = "none"; });
+  const openGraphNode = target => {
+    const hit = target.closest(".risk-node-ip");
+    const n = hit && state.graphNodes[+hit.getAttribute("data-n")];
+    if (n) openDetail(n.label);
+  };
+  $("risk-graph-svg").addEventListener("click", e => openGraphNode(e.target));
+  $("risk-graph-svg").addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGraphNode(e.target); }
+  });
+
+  // ---------- сводка инцидента: только по кнопке ----------
+  const PROVIDER_NAMES = { groq: "Groq", gemini: "Gemini", openrouter: "OpenRouter",
+    ollama: "Ollama", anthropic: "Anthropic" };
+  const FALLBACK_REASONS = {
+    disabled: "LLM не настроена", no_incidents: "инцидентов нет — модель не вызывалась",
+    network: "нет связи с провайдером", auth: "неверный ключ", rate_limited: "лимит провайдера",
+    bad_response: "некорректный ответ модели", fact_check: "ответ модели не прошёл проверку фактов",
+    timeout: "провайдер не ответил вовремя",
+  };
+  function summarySource(d) {
+    if (d.source === "llm") {
+      const seconds = (Number(d.latency_ms) || 0) / 1000;
+      return `сгенерировано ${PROVIDER_NAMES[d.provider] || d.provider} · ${d.model} за ` +
+        `${seconds.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} с · факты проверены`;
+    }
+    const reason = FALLBACK_REASONS[d.fallback_reason] || d.fallback_reason;
+    return "по шаблону" + (reason ? ` (причина: ${reason})` : "");
+  }
+
+  async function loadSummary() {
+    if (state.summaryBusy) return;
+    state.summaryBusy = true;
+    const btn = $("risk-summary-btn");
+    btn.disabled = true;
+    btn.textContent = "Генерируем…";
+    await guard("summary", () => api("/api/risk/summary", { window: 600 }), d => {
+      const paragraphs = String(d.text || "").split("\n").filter(Boolean).map(t => el("p", { text: t }));
+      $("risk-summary").replaceChildren(...(paragraphs.length ? paragraphs : [empty("Сводка пуста")]));
+      $("risk-summary-meta").textContent = summarySource(d) + ` · ${hms(d.generated_at)} по Бишкеку` +
+        (d.cached ? " · из кеша (30 с)" : "");
+      const incidents = Array.isArray(d.incidents) ? d.incidents : [];
+      $("risk-summary-data").textContent = JSON.stringify(incidents, null, 2);
+      $("risk-summary-source").hidden = !incidents.length;
+    }, 0);
+    btn.disabled = false;
+    btn.textContent = "Сводка за 10 минут";
+    state.summaryBusy = false;
+  }
+  $("risk-summary-btn").addEventListener("click", loadSummary);
+
+  function renderLegends() {
+    const levelItem = k => el("span", null, el("i", { style: { background: lvl(k).color } }), lvl(k).name);
+    const levelItems = LEVEL_KEYS.map(levelItem);
+    $("risk-timeline-legend").replaceChildren(...levelItems);
+    $("risk-graph-legend").replaceChildren(...LEVEL_KEYS.map(levelItem),
+      el("span", { text: "крупный круг — IP (размер по баллу) · мелкий — номер" }));
+    $("risk-scatter-legend").replaceChildren(
+      ...LEVEL_KEYS.map(levelItem),
+      el("span", { text: "● код выдан · ○ отказ в выдаче" }));
+  }
+
+  // ---------- 5. Источники атак ----------
+  function quietText(row) {
+    const now = state.now || Date.now() / 1000;
+    const minutes = Math.floor(Math.max(0, now - row.last_seen) / 60);
+    return minutes < 1 ? "атака прекратилась меньше минуты назад"
+      : `атака прекратилась ${minutes} ${plural(minutes, "минуту", "минуты", "минут")} назад`;
+  }
+
+  function detectionText(row) {
+    const action = `В боевом режиме: ${row.would_action_title}`;
+    if (row.incident_type === "sms_pumping" && row.first_high) {
+      let text = `Обнаружен на ${row.first_high.at_number}-м номере · ${action}`;
+      if (row.savings && row.savings.sms)
+        text += `, можно было сэкономить ≈${num(row.savings.sms)} SMS (${num(row.savings.cost)} ${row.savings.currency})`;
+      return text;
+    }
+    const moment = row.first_high || row.detected;
+    const parts = [];
+    if (moment) parts.push(`Обнаружен через ${num(Math.round(moment.after_seconds))} с`);
+    if (row.verify_attempts) parts.push(`попыток: ${num(row.verify_attempts)}`);
+    parts.push(action);
+    return parts.join(" · ");
+  }
+
+  function sourceCard(row) {
+    const level = lvl(row.level);
+    const reasons = (row.reasons || []).slice().sort((a, b) => b.points - a.points);
+    const card = el("article", { class: `risk-source-card ${level.badge}`, tabindex: 0, role: "button",
+        "data-ip": row.ip, "aria-current": state.selected === row.ip ? "true" : "false",
+        "aria-label": `${row.ip}: ${row.incident_title || "подозрительная активность"}, ${riskText(row.score)}. Открыть разбор риска` },
+      el("div", { class: "risk-source-head" },
+        el("span", { class: "mono risk-ip", text: row.ip }),
+        el("span", { class: `badge ${level.badge} risk-verdict`, text: `${level.name} · ${riskText(row.score)}` })),
+      el("div", { class: "risk-kind" }, row.incident_title || "Подозрительная активность",
+        row.incident_subtitle ? el("span", { text: ` — ${row.incident_subtitle}` }) : null),
+      el("div", { class: "risk-meter", "aria-hidden": "true" }, el("i", { style: { width: `${row.score}%` } })),
+      el("ul", { class: "risk-bullets" }, reasons.map(r => el("li", null,
+        el("b", { text: signalTitle(r) }), `: ${r.detail}`))),
+      el("div", { class: "risk-source-foot" },
+        el("span", { text: detectionText(row) }),
+        row.current_score < row.score ? el("span", { class: "risk-quiet", text: quietText(row) }) : null,
+        el("span", { class: "spacer" }),
+        el("button", { type: "button", class: "risk-why", text: "Почему такой риск? →", tabindex: -1 })));
+    return card;
+  }
+
+  function renderSources() {
+    const rows = state.ips;
+    if (!rows) return;
+    const box = $("risk-sources");
+    const focusedIp = document.activeElement && document.activeElement.closest &&
+      document.activeElement.closest("#risk-sources [data-ip]")
+        ? document.activeElement.closest("#risk-sources [data-ip]").getAttribute("data-ip") : null;
+    const risky = rows.filter(r => r.level !== "low");
+    const calm = rows.filter(r => r.level === "low");
+    box.replaceChildren(risky.length
+      ? el("div", { class: "risk-sources-list" }, risky.map(sourceCard))
+      : empty(rows.length ? "Атак не обнаружено — все источники с низким риском" : EMPTY_TEXT));
+    const low = $("risk-lowlist");
+    low.hidden = !calm.length;
+    if (calm.length) {
+      const n = calm.length;
+      $("risk-lowlist-title").textContent = n % 10 === 1 && n % 100 !== 11
+        ? `и ещё ${n} обычный пользователь с низким риском`
+        : `и ещё ${n} обычных ${plural(n, "пользователя", "пользователя", "пользователей")} с низким риском`;
+      $("risk-lowlist-table").replaceChildren(el("table", null,
+        el("thead", null, el("tr", null, el("th", { text: "IP" }),
+          ["Риск", "Номеров", "SMS"].map(t => el("th", { class: "num", text: t })))),
+        el("tbody", null, calm.map(r => el("tr", { class: "risk-row", tabindex: 0, "data-ip": r.ip },
+          el("td", { class: "mono", text: r.ip }), el("td", { class: "num", text: `${r.score} / 100` }),
+          el("td", { class: "num", text: num(r.numbers) }), el("td", { class: "num", text: num(r.sms_sent) }))))));
+    }
+    if (focusedIp) {
+      const again = document.querySelector(`#risk-sources [data-ip="${CSS.escape(focusedIp)}"]`);
+      if (again) again.focus();
+    }
+  }
+
+  const openFromList = e => {
+    const target = e.target.closest("[data-ip]");
+    if (!target) return;
+    if (e.type === "keydown") {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+    }
+    openDetail(target.getAttribute("data-ip"));
+  };
+  for (const id of ["risk-sources", "risk-lowlist-table"]) {
+    $(id).addEventListener("click", openFromList);
+    $(id).addEventListener("keydown", openFromList);
+  }
+  const fetchIps = () => api("/api/risk/ips", { limit: 200, min_level: "low" });
+
+  // ---------- 6. Окно «Почему такой риск?» (нативный <dialog>) ----------
+  const dialog = $("risk-dialog");
+  const TIMELINE_EVENTS = {
+    send_ok: ["Код выдан", "Выдан"], send_rejected: ["Отправка отклонена", "Отказ: лимит отправки"],
+    verify_ok: ["Код подтверждён", "Подтверждён"], verify_fail: ["Неверный код", "Ошибка"],
+    verify_fail_blocked: ["Неверный код → номер заблокирован", "Блокировка номера"],
+    number_blocked: ["Номер заблокирован", "Блокировка номера"],
+    verify_locked: ["Проверка заблокированного номера", "Отказ: номер заблокирован"],
+    verify_expired: ["Код истёк", "Истёк"], ip_rate_limited: ["Лимит проверок по IP", "Лимит"],
+    bad_request: ["Неверный запрос", "Ошибка запроса"], store_unavailable: ["Хранилище недоступно", "Сбой"],
+  };
+
+  function openDetail(ip) {
+    if (!dialog.open) state.opener = document.activeElement;
+    state.selected = ip;
+    state.detail = null;
+    state.detailMissing = false;
+    state.countersOpen = false;
+    $("risk-dialog-kicker").textContent = "";
+    $("risk-dialog-title").textContent = ip;
+    $("risk-dialog-sub").replaceChildren();
+    $("risk-dialog-body").replaceChildren(el("div", { class: "empty", text: "Загрузка…" }));
+    if (!dialog.open) dialog.showModal();
+    renderSources();
+    guard("detail", fetchDetail, d => { state.detail = d; renderDetail(); }, FAST_MS);
+  }
+
+  function closeDetail() {
+    if (dialog.open) dialog.close();  // остальное — в обработчике close (он же срабатывает на Esc)
+  }
+
+  dialog.addEventListener("close", () => {
+    const ip = state.selected;
+    state.selected = null; state.detail = null; state.detailMissing = false;
+    renderSources();
+    // фокус — на элемент, открывший окно (или на его перерисованную копию с тем же IP)
+    let target = state.opener && state.opener.isConnected ? state.opener : null;
+    if (!target && ip)
+      target = [...document.querySelectorAll("#tab-risk [data-ip], #risk-alerts .risk-link")]
+        .find(node => (node.getAttribute("data-ip") || node.textContent) === ip) || null;
+    state.opener = null;
+    if (target && typeof target.focus === "function") target.focus();
+  });
+  // Tab и Shift+Tab ходят по кругу внутри окна (showModal делает страницу инертной,
+  // но с последнего элемента фокус иначе уходит в интерфейс браузера)
+  dialog.addEventListener("keydown", e => {
+    if (e.key !== "Tab") return;
+    const focusable = [...dialog.querySelectorAll('button, summary, a[href], [tabindex]:not([tabindex="-1"])')]
+      .filter(node => node.offsetParent !== null || node === document.activeElement);
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
+      e.preventDefault(); first.focus();
+    }
+  });
+  $("risk-dialog-close").addEventListener("click", closeDetail);
+  dialog.addEventListener("click", e => { if (e.target === dialog) closeDetail(); });  // клик по фону
+  const fetchDetail = () => api("/api/risk/ip", { ip: state.selected });
+
+  function defenseText(d) {
+    const f = d.defense_facts || {};
+    const parts = [];
+    if (f.numbers_blocked) {
+      const masks = (f.blocked_numbers || []).join(", ");
+      const more = f.numbers_blocked > (f.blocked_numbers || []).length ? ", …" : "";
+      parts.push(f.numbers_blocked === 1
+        ? `Номер ${masks} заблокирован после ${f.fails_to_block} неверных кодов`
+        : `Номеров заблокировано: ${num(f.numbers_blocked)}${masks ? ` (${masks}${more})` : ""}, каждый — после ${f.fails_to_block} неверных кодов`);
+    }
+    if (f.locked_attempts) parts.push(`отклонено ${num(f.locked_attempts)} ${plural(f.locked_attempts, "попытка", "попытки", "попыток")} к заблокированному номеру`);
+    if (f.ip_limited) parts.push(`лимит проверок сработал ${num(f.ip_limited)} ${plural(f.ip_limited, "раз", "раза", "раз")}`);
+    if (f.send_rejected) parts.push(`лимит отправок отклонил ${num(f.send_rejected)} ${plural(f.send_rejected, "запрос", "запроса", "запросов")}`);
+    if (parts.length) return { text: capital(parts.join(" · ")) + ".", acted: true };
+    if (d.incident_type === "sms_pumping")
+      return { text: "Базовая защита не сработала: лимит отправок считается по номеру, а бот каждый раз берёт новый.", acted: false };
+    if (d.incident_type && d.incident_type !== "none")
+      return { text: "Базовая защита не сработала: лимиты сервиса не были превышены.", acted: false };
+    return { text: "Базовая защита не вмешивалась — поводов не было.", acted: false };
+  }
+
+  function moduleText(d) {
+    if (d.level === "low") return "Риск низкий. В боевом режиме: обычный режим, вмешательство не требуется.";
+    let found;
+    if (d.incident_type === "sms_pumping" && d.first_high) found = `Обнаружил атаку на ${d.first_high.at_number}-м номере.`;
+    else {
+      const moment = d.first_high || d.detected;
+      found = moment
+        ? `Обнаружил ${d.level === "high" ? "атаку" : "подозрительную активность"} через ${num(Math.round(moment.after_seconds))} с.`
+        : "Обнаружил подозрительную активность.";
+    }
+    let action = d.level === "high" ? " В боевом режиме: блокировка всех запросов с этого IP."
+      : " В боевом режиме: замедление запросов с этого IP.";
+    if (d.savings && d.savings.sms)
+      action += ` Можно было сэкономить ≈${num(d.savings.cost)} ${d.savings.currency} (${num(d.savings.sms)} SMS).`;
+    return found + action;
+  }
+
+  function keyFigures(d) {
+    const st = d.stats || {}, f = d.defense_facts || {};
+    const tile = (value, label) => el("div", { class: "tile" },
+      el("div", { class: "value", text: value }), el("div", { class: "label", text: label }));
+    const spent = `≈${num(d.sms_cost)} ${d.currency}`;
+    const sets = {
+      sms_pumping: [[st.sms_sent, `${plural(st.sms_sent, "номер", "номера", "номеров")} — по одной SMS`, true],
+                    [st.verify_ok, `подтверждено из ${num(st.sms_sent)}`, true], [spent, "потрачено на SMS", true]],
+      code_bruteforce: [[st.verify_fail, plural(st.verify_fail, "неверный код", "неверных кода", "неверных кодов")],
+                        [f.locked_attempts, plural(f.locked_attempts, "попытка после блокировки", "попытки после блокировки", "попыток после блокировки")],
+                        [f.ip_limited, plural(f.ip_limited, "срабатывание лимита", "срабатывания лимита", "срабатываний лимита")]],
+      distributed_bruteforce: [[st.numbers, plural(st.numbers, "номер", "номера", "номеров")],
+                               [st.verify_fail, plural(st.verify_fail, "неверный код", "неверных кода", "неверных кодов")],
+                               [f.ip_limited, plural(f.ip_limited, "срабатывание лимита", "срабатывания лимита", "срабатываний лимита")]],
+    };
+    const chosen = sets[d.incident_type] || [[st.numbers, plural(st.numbers, "номер", "номера", "номеров")],
+                                             [st.sms_sent, "SMS"], [st.verify_ok, "подтверждено"]];
+    const tiles = chosen.filter(([value, , key]) => key || value)
+      .map(([value, label]) => tile(typeof value === "number" ? num(value) : value, label));
+    return tiles.length ? el("div", { class: "tiles" }, tiles) : null;
+  }
+
+  function whyBlock(d) {
+    const reasons = (d.reasons || []).slice().sort((a, b) => b.points - a.points);
+    const bar = el("div", { class: `risk-scorebar ${lvl(d.level).badge}`, role: "img",
+      "aria-label": `${riskText(d.score)}, уровень ${lvl(d.level).name}` },
+      el("i", { style: { width: `${Math.min(100, d.score)}%` } }));
+    const ticks = el("div", { class: "risk-scoreticks", "aria-hidden": "true" },
+      el("span", { style: { left: "30%" }, text: "30 — средний" }),
+      el("span", { style: { left: "60%" }, text: "60 — критический" }));
+    const list = reasons.length
+      ? el("div", { class: "risk-weights" }, reasons.map(r => [
+          el("span", { text: signalTitle(r) }), el("span", { class: "mono", text: `+${r.points}` }),
+          el("span", { class: "risk-why-detail", text: r.detail })]).flat())
+      : empty("Признаков риска нет");
+    return [bar, ticks, list];
+  }
+
+  function timelineTable(d) {
+    const groups = d.timeline_groups || [];
+    if (!groups.length) return empty("Событий за 10 минут нет");
+    const span = g => hms(g.first_ts) === hms(g.last_ts) ? hms(g.first_ts) : `${hms(g.first_ts)}–${hms(g.last_ts)}`;
+    const number = g => g.msisdn ? g.msisdn
+      : g.numbers > 1 ? `${num(g.numbers)} номеров: ${g.msisdn_first} … ${g.msisdn_last}` : "—";
+    const row = g => {
+      const [name, result] = TIMELINE_EVENTS[g.event] || [EVENTS[g.event] || g.event, ""];
+      const tags = [g.new_ip ? "вход с нового IP" : null, g.scope === "cabinet" ? "кабинет абонента" : g.scope]
+        .filter(Boolean).map(t => el("span", { class: "risk-tag", text: t }));
+      return el("tr", null, el("td", { class: "mono", text: span(g) }),
+        el("td", { class: "risk-wrap" }, g.count > 1 ? `${name} ×${num(g.count)}` : name, tags),
+        el("td", { class: "mono risk-wrap", text: number(g) }),
+        el("td", { class: "risk-result" }, result,
+          g.status != null ? el("span", { class: "mono", text: String(g.status) }) : null));
+    };
+    const rows = groups.map(row);
+    if (d.timeline_skipped) {
+      rows.splice(4, 0, el("tr", { class: "risk-skip" }, el("td", { colspan: 4,
+        text: `… ещё ${num(d.timeline_skipped)} ${plural(d.timeline_skipped, "группа", "группы", "групп")} событий` })));
+    }
+    return el("div", { class: "scroll" }, el("table", { class: "risk-timeline" },
+      el("thead", null, el("tr", null, ["Время", "Событие", "Номер", "Результат"].map(t => el("th", { text: t })))),
+      el("tbody", null, rows)));
+  }
+
+  function countersBlock(d) {
+    const st = d.stats || {};
+    const items = [["номеров", st.numbers], ["SMS отправлено", st.sms_sent], ["SMS отклонено", st.sms_rejected],
+      ["подтверждено", st.verify_ok], ["неверных кодов", st.verify_fail], ["истекло", st.verify_expired],
+      ["к заблокированному номеру", st.verify_locked], ["лимит проверок", st.ip_limited]];
+    const details = el("details", { class: "risk-counters" },
+      el("summary", { text: "Все счётчики" }),
+      el("dl", null, items.map(([label, value]) => [
+        el("dt", { class: value ? null : "risk-zero", text: label }),
+        el("dd", { class: value ? null : "risk-zero", text: num(value) })]).flat(),
+        el("dt", { text: "потрачено на SMS" }), el("dd", { text: `${num(d.sms_cost)} ${d.currency}` })),
+      el("div", { class: "details", text: `первое появление: ${dt(d.first_seen)} · последнее: ${dt(d.last_seen)}` }));
+    details.open = !!state.countersOpen;
+    details.addEventListener("toggle", () => { state.countersOpen = details.open; });
+    return details;
+  }
+
+  function renderDetail() {
+    if (!state.selected || !dialog.open) return;
+    const d = state.detail;
+    const body = $("risk-dialog-body");
+    if (!d) {
+      if (state.detailMissing)
+        body.replaceChildren(empty("Данных по этому IP больше нет: активности не было больше часа."));
+      return;
+    }
+    const attack = d.incident_type && d.incident_type !== "none";
+    $("risk-dialog-kicker").textContent = attack ? "Детали атаки" : "Источник запросов";
+    $("risk-dialog-title").textContent = attack ? `${d.ip} · ${d.incident_title}` : d.ip;
+    const score = el("span", { class: `badge ${lvl(d.level).badge}`, text: `${lvl(d.level).name} · ${riskText(d.score)}` });
+    if (d.weights_sum > 100) score.title = `сумма признаков ${d.weights_sum}, шкала ограничена 100`;
+    $("risk-dialog-sub").replaceChildren(...[score,
+      el("span", { text: `Активность: ${hms(d.first_seen)} – ${hms(d.last_seen)} по Бишкеку` }),
+      d.current_score < d.score ? el("span", { class: "risk-quiet", text: quietText(d) }) : null,
+      state.detailMissing ? el("span", { class: "risk-stale", text: "данные устарели" }) : null].filter(Boolean));
+
+    const defense = defenseText(d);
+    const verdict = [
+      el("div", { class: `risk-verdict-block ${defense.acted ? "s-info" : "risk-neutral"}` },
+        el("div", { class: "risk-verdict-label", text: "Что уже сделала защита сервиса" }),
+        el("div", { text: defense.text })),
+      el("div", { class: `risk-verdict-block ${lvl(d.level).badge}` },
+        el("div", { class: "risk-verdict-label", text: "Модуль рисков (режим наблюдения)" }),
+        el("div", { text: moduleText(d) })),
+    ];
+    const scroll = body.scrollTop;
+    body.replaceChildren(...[...verdict, keyFigures(d),
+      el("h3", { text: "Почему такой риск" }), ...whyBlock(d),
+      el("h3", { text: "Хронология" }), timelineTable(d),
+      countersBlock(d), el("div", { class: "details err risk-status", id: "risk-st-detail" })].filter(Boolean));
+    body.scrollTop = scroll;  // опрос не сбивает прокрутку
+  }
+
+  // ---------- 7. Журнал срабатываний защиты и счётчик на кнопке ----------
+  function mergeAlerts(list) {
+    const fresh = (list || []).filter(a => a.id > state.lastAlertId);
+    if (!fresh.length) return 0;
+    state.lastAlertId = Math.max(state.lastAlertId, ...fresh.map(a => a.id));
+    if (state.alertsLoaded) for (const a of fresh) state.fresh.set(a.id, Date.now());
+    state.alerts = fresh.concat(state.alerts).slice(0, MAX_ALERTS);
+    return fresh.length;
+  }
+  async function fetchAlerts(countOnly) {
+    const list = await api("/api/risk/alerts", { limit: MAX_ALERTS, since_id: state.lastAlertId });
+    const wasLoaded = state.alertsLoaded;
+    const added = mergeAlerts(list);
+    state.alertsLoaded = true;
+    if (wasLoaded && added && state.tab !== "risk") { state.unseen += added; renderCount(); }
+    if (countOnly) { if (added) state.alertsDirty = true; return; }
+    if (added || state.alertsDirty || $("risk-alerts").dataset.rendered !== "1") renderAlerts();
+  }
+  function alertDetail(a) {
+    const top = (a.reasons || []).slice().sort((x, y) => y.points - x.points).slice(0, 2);
+    return top.length ? capital(top.map(r => r.detail).join(", ")) + "." : "";
+  }
+
+  function renderAlerts() {
+    const box = $("risk-alerts");
+    box.dataset.rendered = "1";
+    state.alertsDirty = false;
+    const now = Date.now();
+    for (const [id, at] of state.fresh) if (now - at > FLASH_MS) state.fresh.delete(id);
+    if (!state.alerts.length) { box.replaceChildren(empty("Срабатываний пока нет")); return; }
+    box.replaceChildren(...state.alerts.map(a => el("div", {
+        class: `risk-alert ${lvl(a.severity).badge}${state.fresh.has(a.id) ? " risk-new" : ""}` },
+      el("div", { class: "risk-alert-head" },
+        el("span", { class: `badge ${lvl(a.severity).badge}`, text: lvl(a.severity).name }), " ",
+        `${hms(a.ts)} · `,
+        el("button", { type: "button", class: "risk-link mono", text: a.ip, onclick: () => openDetail(a.ip),
+          title: "Открыть разбор риска" }),
+        ` · ${a.incident_title || "Подозрительная активность"} · ${riskText(a.score)}`),
+      el("div", { class: "risk-alert-body", text: alertDetail(a) }),
+      ACTION_FULL[a.severity]
+        ? el("div", { class: "risk-alert-action", text: `В боевом режиме: ${ACTION_FULL[a.severity]}.` }) : null)));
+  }
+
+  function renderCount() {
+    const badge = $("risk-count");
+    badge.textContent = state.unseen > 99 ? "99+" : String(state.unseen);
+    badge.hidden = state.unseen === 0;
+    $("tabbtn-risk").setAttribute("aria-label", state.unseen ? `Риски, новых тревог: ${state.unseen}` : "Риски");
+  }
+
+  // ---------- 8. Подвал ----------
+  function renderMeta() {
+    const m = state.meta;
+    if (!m) return;
+    $("risk-mode").hidden = m.observe_only !== true;
+    const items = [
+      `принято событий: ${num(m.ingested)}`, `отброшено: ${num(m.dropped)}`, `ошибок: ${num(m.errors)}`,
+      `режим доставки: ${m.mode}`, `очередь: ${num(m.queue_size)}`, `окно признаков: ${Math.round(m.window / 60)} мин`,
+    ].map(text => el("span", { text }));
+    $("risk-footer").replaceChildren(...items);
+    $("risk-tech-warn").hidden = !((m.dropped || 0) > 0 || (m.errors || 0) > 0);
+  }
+
+  // ---------- опрос ----------
+  const isLive = () => $("live").getAttribute("aria-pressed") !== "false";
+  const canPoll = () => isLive() && !document.hidden;
+
+  async function pollFast() {
+    if (state.busyFast || state.tab !== "risk" || !canPoll()) return;
+    state.busyFast = true;
+    try {
+      await Promise.all([
+        guard("overview", () => api("/api/risk/overview", { window: 3600 }),
+          d => { state.overview = d; state.now = d.now; renderTiles(); }, FAST_MS),
+        guard("ips", fetchIps, d => { state.ips = d; renderSources(); }, FAST_MS),
+        guard("alerts", () => fetchAlerts(false), () => {}, FAST_MS),
+        state.selected && dialog.open ? guard("detail", fetchDetail, d => {
+          state.detail = d; state.detailMissing = false; renderDetail(); }, FAST_MS) : null,
+      ]);
+    } finally { state.busyFast = false; }
+  }
+
+  async function pollSlow() {
+    if (!canPoll()) return;
+    if (state.tab !== "risk") {
+      // вкладка скрыта: только счётчик новых тревог на кнопке
+      if (state.busyCount) return;
+      state.busyCount = true;
+      try { await fetchAlerts(true); } catch (e) { /* тихо: счётчик не критичен */ }
+      finally { state.busyCount = false; }
+      return;
+    }
+    if (state.busySlow) return;
+    state.busySlow = true;
+    try {
+      await Promise.all([
+        guard("timeline", () => api("/api/risk/timeline", { window: 3600, step: 60 }),
+          d => { state.timeline = d; renderTimeline(); }, SLOW_MS),
+        guard("scatter", fetchScatter, d => { state.scatter = d; renderScatter(); }, SLOW_MS),
+        guard("graph", () => api("/api/risk/graph", { window: 600 }),
+          d => { state.graph = d; renderGraph(); }, SLOW_MS),
+        guard("meta", () => api("/api/risk/meta"),
+          d => { state.meta = d; if (!state.now) state.now = d.now; renderMeta(); }, SLOW_MS),
+      ]);
+    } finally { state.busySlow = false; }
+  }
+
+  // ---------- вкладки ----------
+  const TABS = ["security", "risk"];
+  function setTab(tab, opts) {
+    const { focus = false, updateHash = true } = opts || {};
+    state.tab = tab;
+    for (const name of TABS) {
+      const on = name === tab, btn = $("tabbtn-" + name);
+      btn.setAttribute("aria-selected", String(on));
+      btn.setAttribute("aria-pressed", String(on));
+      btn.tabIndex = on ? 0 : -1;
+      $("tab-" + name).hidden = !on;
+      if (on && focus) btn.focus();
+    }
+    $("meta").hidden = tab !== "security";
+    if (updateHash) history.replaceState(null, "", tab === "risk" ? "#risk" : location.pathname + location.search);
+    if (tab === "risk") {
+      state.unseen = 0;
+      renderCount();
+      requestAnimationFrame(() => { renderTimeline(); renderScatter(); renderGraph(); });
+      pollFast(); pollSlow();
+    }
+    window.dispatchEvent(new CustomEvent("otp-dashboard-tab", { detail: tab }));
+  }
+
+  document.querySelector(".risk-tabs").addEventListener("click", e => {
+    const btn = e.target.closest("[role=tab]");
+    if (btn) setTab(btn.id.replace("tabbtn-", ""));
+  });
+  document.querySelector(".risk-tabs").addEventListener("keydown", e => {
+    const i = TABS.indexOf(state.tab);
+    const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    setTab(TABS[(next + TABS.length) % TABS.length], { focus: true });
+  });
+  window.addEventListener("hashchange", () => {
+    const tab = location.hash === "#risk" ? "risk" : "security";
+    if (tab !== state.tab) setTab(tab, { updateHash: false });
+  });
+  $("live").addEventListener("click", () => { if (isLive()) { pollFast(); pollSlow(); } });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { pollFast(); pollSlow(); } });
+
+  // перерисовка графиков при изменении размера
+  let resizeTimer = null;
+  const onResize = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (state.tab === "risk") { renderTimeline(); renderScatter(); renderGraph(); }
+    }, 150);
+  };
+  if ("ResizeObserver" in window) {
+    const ro = new ResizeObserver(onResize);
+    ro.observe($("risk-timeline-box")); ro.observe($("risk-scatter-box")); ro.observe($("risk-graph-box"));
+  } else {
+    window.addEventListener("resize", onResize);
+  }
+
+  // ---------- старт: адрес без хеша — «Журнал», #risk — «Риски» ----------
+  renderLegends();
+  if (location.hash === "#risk") setTab("risk");
+  else fetchAlerts(true).catch(() => {});  // точка отсчёта для счётчика тревог
+  setInterval(pollFast, FAST_MS);
+  setInterval(pollSlow, SLOW_MS);
 })();
 </script>
 </body>

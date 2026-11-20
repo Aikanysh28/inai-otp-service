@@ -1,0 +1,328 @@
+{
+  "ip": "139.66.77.135",
+  "ts": 1795162699.22,
+  "score": 40,
+  "level": "medium",
+  "would_action": "stricter_delay",
+  "would_action_text": "задержки строже (×2)",
+  "reasons": [
+    {
+      "name": "fail_rate",
+      "title": "Подбор кода",
+      "points": 25,
+      "detail": "20 неудачных проверок кода (100% попыток)"
+    },
+    {
+      "name": "hammering_locked",
+      "title": "Попытки к заблокированному номеру",
+      "points": 15,
+      "detail": "15 попыток после блокировки"
+    }
+  ],
+  "current_score": 40,
+  "incident_type": "code_bruteforce",
+  "incident_title": "Подбор кода к номеру",
+  "incident_subtitle": "попытка угнать аккаунт",
+  "level_title": "Средний",
+  "would_action_title": "замедление",
+  "first_high": null,
+  "detected": {
+    "ts": 1795162695.106,
+    "after_seconds": 7.3,
+    "at_number": 1,
+    "level": "medium"
+  },
+  "savings": null,
+  "first_seen": 1795162687.811,
+  "last_seen": 1795162699.22,
+  "stats": {
+    "numbers": 1,
+    "sms_sent": 1,
+    "sms_rejected": 0,
+    "verify_ok": 0,
+    "verify_fail": 5,
+    "verify_expired": 0,
+    "verify_locked": 15,
+    "ip_limited": 0
+  },
+  "sms_cost": 1.0,
+  "currency": "сом",
+  "sparkline": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "events": [
+    {
+      "ts": 1795162699.22,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162699.009,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162698.628,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162698.389,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162698.172,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162697.896,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162697.673,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162697.12,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162696.609,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162696.216,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162695.804,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162695.331,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162695.106,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162694.858,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162694.41,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162694.154,
+      "event": "number_blocked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": "too_many_failed_attempts",
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162694.154,
+      "event": "verify_fail",
+      "msisdn": "+996500***815",
+      "status": 401,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162693.894,
+      "event": "verify_fail",
+      "msisdn": "+996500***815",
+      "status": 401,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162693.383,
+      "event": "verify_fail",
+      "msisdn": "+996500***815",
+      "status": 401,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162692.94,
+      "event": "verify_fail",
+      "msisdn": "+996500***815",
+      "status": 401,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162692.429,
+      "event": "verify_fail",
+      "msisdn": "+996500***815",
+      "status": 401,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162687.811,
+      "event": "send_ok",
+      "msisdn": "+996500***815",
+      "status": 200,
+      "reason": null,
+      "scope": null,
+      "new_ip": false
+    }
+  ],
+  "timeline_groups": [
+    {
+      "first_ts": 1795162687.811,
+      "last_ts": 1795162687.811,
+      "event": "send_ok",
+      "status": 200,
+      "msisdn": "+996500***815",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996500***815",
+      "msisdn_last": "+996500***815",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162692.429,
+      "last_ts": 1795162694.154,
+      "event": "verify_fail",
+      "status": 401,
+      "msisdn": "+996500***815",
+      "count": 4,
+      "numbers": 1,
+      "msisdn_first": "+996500***815",
+      "msisdn_last": "+996500***815",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162694.154,
+      "last_ts": 1795162694.154,
+      "event": "verify_fail_blocked",
+      "status": 423,
+      "msisdn": "+996500***815",
+      "count": 1,
+      "numbers": 1,
+      "msisdn_first": "+996500***815",
+      "msisdn_last": "+996500***815",
+      "new_ip": false,
+      "scope": null
+    },
+    {
+      "first_ts": 1795162694.41,
+      "last_ts": 1795162699.22,
+      "event": "verify_locked",
+      "status": 423,
+      "msisdn": "+996500***815",
+      "count": 15,
+      "numbers": 1,
+      "msisdn_first": "+996500***815",
+      "msisdn_last": "+996500***815",
+      "new_ip": false,
+      "scope": null
+    }
+  ],
+  "timeline_skipped": 0,
+  "defense_facts": {
+    "numbers_blocked": 1,
+    "locked_attempts": 15,
+    "ip_limited": 0,
+    "send_rejected": 0,
+    "blocked_numbers": [
+      "+996500***815"
+    ],
+    "fails_to_block": 5
+  },
+  "weights_sum": 40
+}
