@@ -33,6 +33,7 @@ class Settings:
 
     code_length: int = 6
     code_ttl: int = 120  # секунд жизни кода
+    demo_show_code: bool = field(default_factory=lambda: os.getenv("OTP_DEMO_SHOW_CODE") == "1")
 
     # Прогрессивная задержка повторной отправки: перед 2-й, 3-й, 4-й ... отправкой
     resend_delays: tuple[int, ...] = (30, 60, 120)

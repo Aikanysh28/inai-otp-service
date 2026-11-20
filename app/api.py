@@ -4,6 +4,7 @@
   POST /otp/verify {"msisdn", "code"}  -> 200 | 400 | 401 | 410 | 423 | 429
   GET  /health                         -> 200 | 503
   GET  /dashboard                      -> HTML-дашборд событий безопасности
+  GET  /demo                           -> HTML-форма ручной проверки OTP
   GET  /api/security/events            -> JSON для дашборда
 """
 from __future__ import annotations
@@ -26,6 +27,7 @@ EVENTS_DEFAULT_LIMIT = 100
 EVENTS_MAX_LIMIT = 1000
 STORE_RETRY_AFTER = 5
 DASHBOARD_HTML = os.path.join(os.path.dirname(__file__), "static", "dashboard.html")
+DEMO_HTML = os.path.join(os.path.dirname(__file__), "static", "demo.html")
 
 SEND_HTTP_STATUS = {
     SendStatus.SENT: 200,
@@ -117,10 +119,11 @@ def _without_none(**fields: Any) -> dict:
     return {name: value for name, value in fields.items() if value is not None}
 
 
-@lru_cache(maxsize=1)
-def _dashboard_page() -> bytes:
-    with open(DASHBOARD_HTML, "rb") as f:
-        return f.read()
+@lru_cache(maxsize=2)
+def _static_page(path: str) -> Response:
+    with open(path, "rb") as f:
+        return Response(200, f.read(),
+                        {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"})
 
 
 class OTPApi:
@@ -132,8 +135,11 @@ class OTPApi:
             ("POST", "/otp/send"): self.send,
             ("POST", "/otp/verify"): self.verify,
             ("GET", "/dashboard"): self.dashboard,
+            ("GET", "/demo"): self.demo,
             ("GET", "/api/security/events"): self.events,
         }
+        if service.settings.demo_show_code:
+            self._routes["POST", "/demo/send"] = self.demo_send
         self._paths = {path for _, path in self._routes}
 
     def handle(self, request: Request) -> Response:
@@ -156,12 +162,21 @@ class OTPApi:
     # ---------- OTP ----------
 
     def send(self, request: Request) -> Response:
+        return self._send(request, show_code=False)
+
+    def demo_send(self, request: Request) -> Response:
+        response = self._send(request, show_code=True)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    def _send(self, request: Request, *, show_code: bool) -> Response:
         msisdn = validate_msisdn(_field(request.json(), "msisdn"))
         result = self.service.send(msisdn, request.ip)
 
         if result.status is SendStatus.SENT:
             payload = _without_none(status=result.status.value, expires_in=result.expires_in,
-                                    next_send_in=result.retry_after)
+                                    next_send_in=result.retry_after,
+                                    code=result.demo_code if show_code else None)
         else:
             payload = _without_none(status=result.status.value, retry_after=result.retry_after)
         return Response.json(SEND_HTTP_STATUS[result.status], payload,
@@ -195,8 +210,10 @@ class OTPApi:
     def dashboard(self, request: Request) -> Response:
         if not self._authorized(request):
             return Response.error(401, "unauthorized")
-        return Response(200, _dashboard_page(),
-                        {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"})
+        return _static_page(DASHBOARD_HTML)
+
+    def demo(self, request: Request) -> Response:
+        return _static_page(DEMO_HTML)
 
     def events(self, request: Request) -> Response:
         if not self._authorized(request):

@@ -52,6 +52,7 @@ class SendResult:
     # Для отказа — через сколько секунд повторить; для успеха — когда разрешена следующая выдача.
     retry_after: Optional[int] = None
     expires_in: Optional[int] = None
+    demo_code: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,7 @@ class OTPService:
                 SendStatus.SENT,
                 retry_after=_whole_seconds(self._next_send_in(sends, now)),
                 expires_in=ttl,
+                demo_code=code if self.settings.demo_show_code else None,
             )
 
     def _check_send_allowed(self, msisdn: str, ip: str, sends: list[float],

@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Демо OTP-сервиса</title>
+<style>
+  :root { color-scheme: light; font: 16px/1.5 system-ui, sans-serif; color: #182437; background: #f2f5fa; }
+  * { box-sizing: border-box; }
+  body { max-width: 1040px; margin: auto; padding: 32px 20px; }
+  header, .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1, h2, p { margin: 0 0 12px; }
+  h1 { font-size: clamp(24px, 5vw, 36px); margin: 0; }
+  h2 { font-size: 20px; }
+  a { color: #234dc4; }
+  main { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-top: 24px; }
+  section { background: white; border: 1px solid #d9e2f0; border-radius: 14px; padding: 20px; min-width: 0; }
+  form + form { border-top: 1px solid #d9e2f0; margin-top: 18px; padding-top: 18px; }
+  label { display: block; font-weight: 650; }
+  input { display: block; width: 100%; margin: 6px 0 10px; border: 1px solid #899bb3; border-radius: 8px; padding: 10px; font: inherit; }
+  button { border: 0; border-radius: 8px; padding: 9px 13px; font: inherit; font-weight: 650; background: #244dc2; color: white; cursor: pointer; }
+  button.secondary { color: #23449b; background: #ebf0ff; }
+  button:disabled { opacity: .6; cursor: wait; }
+  :focus-visible { outline: 3px solid #2554e2; outline-offset: 3px; }
+  .hint, time { color: #485a73; font-size: .9rem; }
+  #timers { margin-top: 12px; }
+  ol, ul { padding-inline-start: 22px; }
+  li + li { margin-top: 8px; }
+  #history { max-height: 340px; overflow: auto; overflow-wrap: anywhere; }
+  #history pre { white-space: pre-wrap; background: #f2f5fa; padding: 8px; border-radius: 6px; margin: 4px 0 0; }
+  .scenarios { grid-column: 1 / -1; }
+  @media (max-width: 700px) { main { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Проверка одноразового кода</h1>
+  <a href="/dashboard">Журнал безопасности</a>
+</header>
+<main>
+  <section aria-label="Ввод номера и кода">
+    <form id="send">
+      <label for="phone">Номер телефона</label>
+      <input id="phone" type="tel" autocomplete="tel" placeholder="+996 770 730 000">
+      <div class="row">
+        <button type="submit">Получить код</button>
+        <button type="button" class="secondary" id="example">Подставить тестовый номер</button>
+      </div>
+    </form>
+    <form id="verify">
+      <label for="code">Код из SMS</label>
+      <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6 цифр">
+      <p class="hint">В демо-режиме код появится на странице. При обычном запуске код доступен в консоли сервиса.</p>
+      <button type="submit">Проверить код</button>
+      <p id="demo-code" role="status" hidden></p>
+      <button type="button" class="secondary" id="fill-code" hidden>Подставить код</button>
+    </form>
+    <p id="timers" class="hint" hidden></p>
+  </section>
+  <section aria-labelledby="results">
+    <h2 id="results">Ответы сервера</h2>
+    <p id="latest" role="status">Здесь появится результат запроса.</p>
+    <ol id="history" aria-label="История запросов"></ol>
+  </section>
+  <section class="scenarios">
+    <h2>Ручные сценарии из ТЗ</h2>
+    <ul>
+      <li><strong>Успех и одноразовость.</strong> Получи код, введи его и проверь дважды. Ожидаются <code>200</code>, затем <code>401</code>.</li>
+      <li><strong>Срок действия.</strong> Получи код и дождись 120 секунд без повторной выдачи. Первая проверка просроченного кода даст <code>410</code>.</li>
+      <li><strong>Замена кода.</strong> Дождись разрешённой повторной выдачи. Проверь предыдущий код после получения нового. Ожидается <code>401</code>, с новым кодом ожидается <code>200</code>.</li>
+      <li><strong>Ограничение отправки.</strong> Сразу после выдачи нажми «Получить код» ещё раз. Ожидается <code>429</code>. При трёх выдачах за 10 минут четвёртая тоже получает <code>429</code>.</li>
+      <li><strong>Ошибки и блокировка.</strong> Получи новый код и вручную введи другой шестизначный код пять раз. Ожидаются четыре <code>401</code> и затем <code>423</code>. Заблокированный номер не сможет запросить новый код 15 минут.</li>
+      <li><strong>Валидация.</strong> Попробуй отправить короткий номер или проверить код из пяти цифр. Ожидается <code>400</code>.</li>
+      <li><strong>Автоматические сценарии.</strong> Параллельные проверки, общий лимит по IP и временные границы покрывает <code>python3 run_scenarios.py</code>. Собственные HTTP-проверки жюри работают с <code>/otp/send</code> и <code>/otp/verify</code>.</li>
+    </ul>
+  </section>
+</main>
+<script>
+  const phone = document.querySelector('#phone');
+  const code = document.querySelector('#code');
+  const latest = document.querySelector('#latest');
+  const history = document.querySelector('#history');
+  const timers = document.querySelector('#timers');
+  const sendButton = document.querySelector('#send button[type="submit"]');
+  const verifyButton = document.querySelector('#verify button[type="submit"]');
+  const demoCode = document.querySelector('#demo-code');
+  const fillCode = document.querySelector('#fill-code');
+  const deadlines = new Map();
+  let ipRetry = 0;
+  let issuedCode = '';
+
+  const messages = {
+    sent: 'Код выдан',
+    verified: 'Код принят',
+    invalid_code: 'Код неверный, уже использован или не выдавался',
+    code_expired: 'Срок действия кода истёк',
+    bad_request: 'Проверь формат номера или кода',
+    msisdn_blocked: 'Номер заблокирован',
+    resend_too_early: 'Повторная отправка пока недоступна',
+    send_limit_exceeded: 'Исчерпан лимит отправок на номер',
+    ip_rate_limited: 'Исчерпан лимит проверок с этого IP',
+    service_unavailable: 'Сервис временно недоступен'
+  };
+
+  function number() {
+    return phone.value.trim().replace(/^\+/, '').replace(/[\s()-]/g, '');
+  }
+
+  function displayCode(value = '') {
+    issuedCode = value;
+    demoCode.textContent = value ? `Тестовый код: ${value}` : '';
+    demoCode.hidden = fillCode.hidden = !value;
+  }
+
+  fillCode.addEventListener('click', () => {
+    code.value = issuedCode;
+    code.focus();
+  });
+
+  function renderTimers() {
+    const state = deadlines.get(number()) || {};
+    const seconds = deadline => Math.ceil(((deadline || 0) - Date.now()) / 1000);
+    const lines = [];
+    if (state.expires) {
+      const remaining = seconds(state.expires);
+      lines.push(remaining > 0 ? `Код действует ещё ${remaining} с` : 'Срок действия кода истёк');
+    }
+    if (seconds(state.send) > 0) lines.push(`До повторной выдачи ${seconds(state.send)} с`);
+    if (seconds(state.block) > 0) lines.push(`Номер заблокирован ещё ${seconds(state.block)} с`);
+    if (seconds(ipRetry) > 0) lines.push(`IP-лимит проверок действует ещё ${seconds(ipRetry)} с`);
+    timers.textContent = lines.join(' · ');
+    timers.hidden = lines.length === 0;
+  }
+
+  function updateTimers(msisdn, action, status, data) {
+    const state = deadlines.get(msisdn) || {};
+    const deadline = seconds => Date.now() + seconds * 1000;
+    if (status === 200 && action === 'send') {
+      state.expires = deadline(data.expires_in);
+      state.send = deadline(data.next_send_in);
+    }
+    if ((status === 200 && action === 'verify') || status === 410 || status === 423) {
+      delete state.expires;
+    }
+    if (status === 423) state.block = deadline(data.retry_after);
+    if (status === 429 && action === 'send') state.send = deadline(data.retry_after);
+    if (status === 429 && action === 'verify') ipRetry = deadline(data.retry_after);
+    deadlines.set(msisdn, state);
+    renderTimers();
+  }
+
+  function showResult(action, status, data) {
+    const label = action === 'send' ? 'Выдача' : 'Проверка';
+    latest.textContent = `${label} · ${status} · ${messages[data.status] || data.status}`;
+    const item = document.createElement('li');
+    item.textContent = latest.textContent;
+    const details = document.createElement('pre');
+    details.textContent = JSON.stringify(data, null, 2);
+    item.append(details);
+    history.prepend(item);
+  }
+
+  async function submit(action) {
+    const msisdn = number();
+    const payload = { msisdn };
+    if (action === 'verify') payload.code = code.value;
+    sendButton.disabled = verifyButton.disabled = true;
+    try {
+      const options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      };
+      let response = await fetch(action === 'send' ? '/demo/send' : '/otp/verify', options);
+      if (action === 'send' && response.status === 404) {
+        response = await fetch('/otp/send', options);
+      }
+      const data = await response.json();
+      updateTimers(msisdn, action, response.status, data);
+      const { code: revealedCode, ...result } = data;
+      showResult(action, response.status, result);
+      if (action === 'verify' && number() === msisdn && [200, 410, 423].includes(response.status)) {
+        displayCode();
+      }
+      if (response.ok && action === 'send' && number() === msisdn) {
+        displayCode(revealedCode);
+        code.value = '';
+        code.focus();
+      }
+    } catch {
+      latest.textContent = 'Ответ сервера не получен. Проверь, запущен ли сервис.';
+    } finally {
+      sendButton.disabled = verifyButton.disabled = false;
+    }
+  }
+
+  for (const action of ['send', 'verify']) {
+    document.querySelector(`#${action}`).addEventListener('submit', event => {
+      event.preventDefault();
+      if (!sendButton.disabled) submit(action);
+    });
+  }
+  document.querySelector('#example').addEventListener('click', () => {
+    phone.value = '+996 770 730 000';
+    displayCode();
+    phone.focus();
+    renderTimers();
+  });
+  phone.addEventListener('input', () => {
+    displayCode();
+    renderTimers();
+  });
+  setInterval(renderTimers, 1000);
+</script>
+</body>
+</html>
