@@ -1,0 +1,34 @@
+# Запуск одной командой:  docker compose up --build
+services:
+  redis:
+    image: redis:7-alpine
+    # Хранилище только для короткоживущих данных: без снапшотов на диск
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  otp:
+    build: .
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      # Ключ HMAC: задайте свой в .env или окружении (OTP_SECRET=...)
+      OTP_SECRET: ${OTP_SECRET:-change-me-in-production-please}
+      DASHBOARD_TOKEN: ${DASHBOARD_TOKEN:-}
+      OTP_DEBUG_RETURN_CODE: ${OTP_DEBUG_RETURN_CODE:-0}
+    ports:
+      - "8000:8000"
+    volumes:
+      # именованный том (а не ./logs): на Linux-хосте bind-mount принадлежал бы root
+      # и непривилегированный пользователь контейнера не смог бы писать логи
+      - otp-logs:/srv/logs
+    restart: unless-stopped
+
+volumes:
+  otp-logs:

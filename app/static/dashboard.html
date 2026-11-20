@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OTP Security</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f4f3f0;
+    --surface-1: #fcfcfb;
+    --border: #e2e1dc;
+    --grid: #ecebe7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #7a7974;
+    --series-1: #2a78d6; /* выдано */
+    --series-2: #eb6834; /* неверные */
+    --series-3: #1baf7a; /* успешные */
+    --series-4: #eda100; /* отклонено защитой */
+    --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+    --good-text: #006300; --critical-text: #b42a2a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b; --grid: #262624;
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8e8d86;
+      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+      --good-text: #4cc84c; --critical-text: #ee7a7a;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b; --grid: #262624;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8e8d86;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --good-text: #4cc84c; --critical-text: #ee7a7a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface-0); color: var(--text-primary);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0; font-weight: 650; }
+  .meta { color: var(--text-secondary); font-size: 13px; }
+  .spacer { flex: 1; }
+  button {
+    font: inherit; font-size: 13px; color: var(--text-primary); background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer;
+  }
+  button[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
+  .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); margin-right: 6px; }
+  .paused .live-dot { background: var(--text-muted); }
+  .err { color: var(--critical-text); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .tile .label { color: var(--text-secondary); font-size: 12px; }
+  .tile .value { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .tile .sub { color: var(--text-muted); font-size: 12px; }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; min-width: 0; }
+  .card h2 { font-size: 14px; margin: 0 0 10px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .card h2 .spacer { flex: 1; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .chart-box { position: relative; }
+  svg.chart { width: 100%; height: 220px; display: block; overflow: visible; }
+  svg.chart text { fill: var(--text-muted); font-size: 11px; }
+  .tooltip {
+    position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    min-width: 170px; display: none; z-index: 2;
+  }
+  .tooltip .row { display: flex; justify-content: space-between; gap: 12px; }
+  .tooltip .row span:last-child { font-variant-numeric: tabular-nums; }
+  .tooltip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--text-secondary); font-weight: 500; font-size: 12px; border-bottom: 1px solid var(--border); padding: 6px 8px; }
+  td { border-bottom: 1px solid var(--grid); padding: 6px 8px; vertical-align: top; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
+  .scroll { overflow-x: auto; }
+  .empty { color: var(--text-muted); padding: 10px 0; }
+  .details { color: var(--text-secondary); font-size: 12px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+  .badge .ic { font-size: 11px; color: var(--text-secondary); }
+  .s-good { --c: var(--good); } .s-info { --c: var(--series-1); }
+  .s-warning { --c: var(--warning); } .s-serious { --c: var(--serious); } .s-critical { --c: var(--critical); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .bar-cell { display: flex; align-items: center; gap: 8px; }
+  .bar-cell .bar { height: 8px; border-radius: 0 4px 4px 0; background: var(--series-4); min-width: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Журнал безопасности OTP</h1>
+    <span class="meta" id="meta">загрузка…</span>
+    <span class="spacer"></span>
+    <button id="live" aria-pressed="true"><span class="live-dot"></span>Обновление: вкл</button>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="card">
+    <h2>События по минутам, последние 30 минут <span class="spacer"></span>
+      <button id="tableToggle" aria-pressed="false">Таблица</button></h2>
+    <div class="legend" id="legend"></div>
+    <div class="chart-box" id="chartBox">
+      <svg class="chart" id="chart" role="img" aria-label="Столбчатая диаграмма событий безопасности по минутам"></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+    <div class="scroll" id="chartTable" hidden></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Подозрительные IP</h2>
+      <div class="details" style="margin:-4px 0 8px">неверные коды, блокировки и срабатывания лимитов</div>
+      <div class="scroll" id="topIps"></div>
+    </section>
+    <section class="card">
+      <h2>Последние блокировки номеров</h2>
+      <div class="scroll" id="blocks"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Последние события</h2>
+    <div class="chips" id="filters"></div>
+    <div class="scroll" id="events"></div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const token = new URLSearchParams(location.search).get("token");
+  const API = "/api/security/events?limit=300" + (token ? "&token=" + encodeURIComponent(token) : "");
+
+  const SERIES = [
+    { key: "issued",   name: "Выдано кодов",        color: "var(--series-1)" },
+    { key: "failed",   name: "Неверные / истёкшие", color: "var(--series-2)" },
+    { key: "success",  name: "Успешные проверки",   color: "var(--series-3)" },
+    { key: "rejected", name: "Отклонено защитой",   color: "var(--series-4)" },
+  ];
+
+  // событие -> [подпись, статус, значок]
+  const EVENTS = {
+    otp_issued:              ["Код выдан",                "info",     "✉"],
+    verify_success:          ["Успешная проверка",        "good",     "✓"],
+    verify_failed:           ["Неверный код",             "warning",  "✗"],
+    verify_expired:          ["Код истёк",                "warning",  "⌛"],
+    msisdn_blocked:          ["Номер заблокирован",       "critical", "⛔"],
+    verify_rejected_blocked: ["Проверка: номер в блоке",  "critical", "⛔"],
+    send_rejected_blocked:   ["Отправка: номер в блоке",  "critical", "⛔"],
+    verify_ip_rate_limited:  ["Лимит проверок по IP",     "serious",  "⏱"],
+    send_rate_limited:       ["Лимит отправки",           "serious",  "⏱"],
+    store_unavailable:       ["Хранилище недоступно",     "critical", "!"],
+  };
+  const FILTERS = [
+    ["all", "Все", () => true],
+    ["issued", "Выдача", e => e === "otp_issued"],
+    ["failed", "Неверные вводы", e => e === "verify_failed" || e === "verify_expired"],
+    ["blocks", "Блокировки", e => EVENTS[e] && EVENTS[e][1] === "critical"],
+    ["limits", "Лимиты", e => EVENTS[e] && EVENTS[e][1] === "serious"],
+    ["success", "Успешные", e => e === "verify_success"],
+  ];
+
+  let data = null, live = true, filter = "all", showTable = false;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = n => Number(n || 0).toLocaleString("ru-RU");
+  const hhmm = sec => new Date(sec * 1000).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const time = iso => new Date(iso).toLocaleTimeString("ru-RU");
+  const badge = ev => {
+    const [label, st, ic] = EVENTS[ev] || [ev, "info", "•"];
+    return `<span class="badge s-${st}"><span class="ic">${ic}</span>${esc(label)}</span>`;
+  };
+
+  $("legend").innerHTML = SERIES.map(s => `<span><i style="background:${s.color}"></i>${s.name}</span>`).join("");
+  $("filters").innerHTML = FILTERS.map(([k, n]) => `<button data-f="${k}" aria-pressed="${k === filter}">${n}</button>`).join("");
+  $("filters").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    filter = b.dataset.f;
+    $("filters").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.f === filter));
+    renderEvents();
+  });
+  $("live").addEventListener("click", () => {
+    live = !live;
+    $("live").setAttribute("aria-pressed", live);
+    $("live").innerHTML = `<span class="live-dot"></span>Обновление: ${live ? "вкл" : "пауза"}`;
+    document.body.classList.toggle("paused", !live);
+    if (live) load();
+  });
+  $("tableToggle").addEventListener("click", () => {
+    showTable = !showTable;
+    $("tableToggle").setAttribute("aria-pressed", showTable);
+    $("chartBox").hidden = showTable; $("chartTable").hidden = !showTable;
+  });
+
+  function renderTiles() {
+    const c = data.counters;
+    const sum = (...ks) => ks.reduce((a, k) => a + (c[k] || 0), 0);
+    const tiles = [
+      ["Выдано кодов", sum("otp_issued"), ""],
+      ["Успешных проверок", sum("verify_success"), ""],
+      ["Неверных вводов", sum("verify_failed"), `истекло: ${fmt(sum("verify_expired"))}`],
+      ["Блокировок номеров", sum("msisdn_blocked"), `отказов в блоке: ${fmt(sum("verify_rejected_blocked", "send_rejected_blocked"))}`],
+      ["Лимит по IP", sum("verify_ip_rate_limited"), "проверок отклонено"],
+      ["Лимит отправки", sum("send_rate_limited"), "отправок отклонено"],
+    ];
+    $("tiles").innerHTML = tiles.map(([l, v, s]) =>
+      `<div class="tile"><div class="label">${l}</div><div class="value">${fmt(v)}</div><div class="sub">${s || "&nbsp;"}</div></div>`).join("");
+  }
+
+  function niceMax(v) {
+    if (v <= 4) return 4;
+    const p = Math.pow(10, Math.floor(Math.log10(v)));
+    for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p;
+    return 10 * p;
+  }
+
+  function renderChart() {
+    const svg = $("chart"), tl = data.timeline;
+    const W = svg.clientWidth || 800, H = 220, padL = 36, padR = 4, padT = 8, padB = 22;
+    const cw = W - padL - padR, ch = H - padT - padB;
+    const totals = tl.map(m => SERIES.reduce((a, s) => a + m[s.key], 0));
+    const max = niceMax(Math.max(...totals, 1));
+    const step = cw / tl.length, bw = Math.max(2, Math.min(28, step * 0.7));
+    const y = v => padT + ch - (v / max) * ch;
+    let out = "";
+    for (let i = 0; i <= 4; i++) {
+      const v = max * i / 4, yy = y(v);
+      out += `<line x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}" stroke="var(--grid)" stroke-width="1"/>`;
+      out += `<text x="${padL - 6}" y="${yy + 4}" text-anchor="end">${fmt(v)}</text>`;
+    }
+    tl.forEach((m, i) => {
+      const x = padL + i * step + (step - bw) / 2;
+      let acc = 0;
+      const segs = SERIES.filter(s => m[s.key] > 0);
+      segs.forEach((s, j) => {
+        const v = m[s.key], y0 = y(acc), y1 = y(acc + v);
+        acc += v;
+        const top = j === segs.length - 1;
+        const h = Math.max(1, y0 - y1 - (top ? 0 : 2)); // 2px зазор между сегментами
+        const yTop = y0 - h;
+        out += top
+          ? `<path d="M${x},${y0}V${yTop + Math.min(4, h)}a4,4 0 0 1 4,-4H${x + bw - 4}a4,4 0 0 1 4,4V${y0}Z" fill="${s.color}"/>`
+          : `<rect x="${x}" y="${yTop}" width="${bw}" height="${h}" fill="${s.color}"/>`;
+      });
+      if (i % 5 === 0 || i === tl.length - 1)
+        out += `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${hhmm(m.minute)}</text>`;
+      out += `<rect class="hit" data-i="${i}" x="${padL + i * step}" y="${padT}" width="${step}" height="${ch}" fill="transparent"/>`;
+    });
+    out += `<line x1="${padL}" x2="${W - padR}" y1="${y(0)}" y2="${y(0)}" stroke="var(--border)" stroke-width="1"/>`;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.innerHTML = out;
+
+    $("chartTable").innerHTML = `<table><thead><tr><th>Минута</th>${SERIES.map(s => `<th class="num">${s.name}</th>`).join("")}</tr></thead><tbody>` +
+      tl.slice().reverse().map(m => `<tr><td>${hhmm(m.minute)}</td>${SERIES.map(s => `<td class="num">${fmt(m[s.key])}</td>`).join("")}</tr>`).join("") +
+      `</tbody></table>`;
+  }
+
+  // Подсказка при наведении на столбец
+  $("chart").addEventListener("mousemove", e => {
+    const hit = e.target.closest(".hit"), tip = $("tooltip");
+    if (!hit || !data) { tip.style.display = "none"; return; }
+    const m = data.timeline[+hit.dataset.i];
+    tip.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${hhmm(m.minute)}</div>` +
+      SERIES.map(s => `<div class="row"><span><i style="background:${s.color}"></i>${s.name}</span><span>${fmt(m[s.key])}</span></div>`).join("");
+    tip.style.display = "block";
+    const box = $("chartBox").getBoundingClientRect();
+    let left = e.clientX - box.left + 14;
+    if (left + tip.offsetWidth > box.width) left = e.clientX - box.left - tip.offsetWidth - 14;
+    tip.style.left = Math.max(0, left) + "px";
+    tip.style.top = Math.max(0, e.clientY - box.top - 20) + "px";
+  });
+  $("chart").addEventListener("mouseleave", () => { $("tooltip").style.display = "none"; });
+
+  function renderTopIps() {
+    const rows = data.top_ips;
+    if (!rows.length) { $("topIps").innerHTML = `<div class="empty">Пока нет подозрительной активности</div>`; return; }
+    const max = rows[0].events;
+    $("topIps").innerHTML = `<table><thead><tr><th>IP</th><th>Событий</th></tr></thead><tbody>` +
+      rows.map(r => `<tr><td class="mono">${esc(r.ip)}</td><td><div class="bar-cell"><div class="bar" style="width:${Math.max(2, r.events / max * 160)}px"></div><span>${fmt(r.events)}</span></div></td></tr>`).join("") +
+      `</tbody></table>`;
+  }
+
+  function renderBlocks() {
+    const rows = data.recent_blocks;
+    if (!rows.length) { $("blocks").innerHTML = `<div class="empty">Блокировок не было</div>`; return; }
+    $("blocks").innerHTML = `<table><thead><tr><th>Время</th><th>Номер</th><th>IP</th><th class="num">Блок до</th></tr></thead><tbody>` +
+      rows.map(r => {
+        const until = new Date(new Date(r.ts).getTime() + (r.duration || 0) * 1000);
+        const active = until > Date.now();
+        return `<tr><td>${time(r.ts)}</td><td class="mono">${esc(r.msisdn)}</td><td class="mono">${esc(r.ip)}</td>` +
+          `<td class="num">${until.toLocaleTimeString("ru-RU")} ${active ? '<span class="badge s-critical">активна</span>' : '<span class="details">снята</span>'}</td></tr>`;
+      }).join("") + `</tbody></table>`;
+  }
+
+  function renderEvents() {
+    if (!data) return;
+    const f = FILTERS.find(x => x[0] === filter)[2];
+    const rows = data.events.filter(r => f(r.event)).slice(0, 100);
+    if (!rows.length) { $("events").innerHTML = `<div class="empty">Событий нет</div>`; return; }
+    const skip = new Set(["ts", "event", "msisdn", "ip"]);
+    $("events").innerHTML = `<table><thead><tr><th>Время</th><th>Событие</th><th>Номер</th><th>IP</th><th>Детали</th></tr></thead><tbody>` +
+      rows.map(r => `<tr><td>${time(r.ts)}</td><td>${badge(r.event)}</td><td class="mono">${esc(r.msisdn || "—")}</td><td class="mono">${esc(r.ip || "—")}</td>` +
+        `<td class="details">${Object.entries(r).filter(([k]) => !skip.has(k)).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(", ")}</td></tr>`).join("") +
+      `</tbody></table>`;
+  }
+
+  async function load() {
+    try {
+      const res = await fetch(API, { cache: "no-store" });
+      if (res.status === 401) throw new Error("нужен токен: откройте /dashboard?token=…");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      data = await res.json();
+      const up = data.uptime, h = Math.floor(up / 3600), m = Math.floor(up % 3600 / 60);
+      $("meta").innerHTML = `хранилище: ${esc(data.storage)} · аптайм ${h} ч ${m} мин · обновлено ${new Date().toLocaleTimeString("ru-RU")}`;
+      renderTiles(); renderChart(); renderTopIps(); renderBlocks(); renderEvents();
+    } catch (e) {
+      $("meta").innerHTML = `<span class="err">ошибка загрузки: ${esc(e.message)}</span>`;
+    }
+  }
+
+  load();
+  setInterval(() => { if (live && !document.hidden) load(); }, 2000);
+  window.addEventListener("resize", () => data && renderChart());
+})();
+</script>
+</body>
+</html>
