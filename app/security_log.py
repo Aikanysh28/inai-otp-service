@@ -1,9 +1,6 @@
-"""Журнал событий безопасности и «доставка» SMS.
+"""Журнал событий безопасности: JSON-строки в logs/security.log и консоль.
 
-Два независимых канала:
-* SecurityLog — JSON-строки в logs/security.log и консоль. Коды сюда НЕ попадают.
-* SmsGateway  — тестовый SMS-транспорт: строка JSON {"ts","msisdn","code"} в outbox/sms.jsonl
-                (формат перехвата жюри) и строка в консоль. Сервис этот файл не читает.
+Кодов в журнале нет, номера маскируются. Последние события хранятся в памяти для дашборда.
 """
 from __future__ import annotations
 
@@ -13,12 +10,9 @@ import os
 import threading
 import time
 from collections import Counter, deque
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Callable, Optional
-
-# Asia/Bishkek — UTC+6 без перехода на летнее время; фиксированное смещение не требует tzdata.
-BISHKEK_TZ = timezone(timedelta(hours=6), "Asia/Bishkek")
 
 
 class SecurityEvent(str, Enum):
@@ -34,30 +28,24 @@ class SecurityEvent(str, Enum):
     STORE_UNAVAILABLE = "store_unavailable"
 
 
-def _build_logger(name: str, path: str, fmt: str, console: bool = True) -> logging.Logger:
+def _build_logger(name: str, path: str, console: bool) -> logging.Logger:
     """Логгер в файл и (опционально) консоль.
 
     Создаётся собственный экземпляр, а не глобальный logging.getLogger(name):
     иначе несколько журналов (например, в тестах) перехватывали бы обработчики друг друга.
     """
     logger = logging.Logger(name, logging.INFO)
-    formatter = logging.Formatter(fmt)
     handlers: list[logging.Handler] = [logging.FileHandler(path, encoding="utf-8")]
     if console:
         handlers.append(logging.StreamHandler())
     for handler in handlers:
-        handler.setFormatter(formatter)
+        handler.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(handler)
     return logger
 
 
-def _close_logger(logger: logging.Logger) -> None:
-    for handler in list(logger.handlers):
-        logger.removeHandler(handler)
-        handler.close()
-
-
 def mask_msisdn(msisdn: str) -> str:
+    """996770730000 -> 9967*****000."""
     if len(msisdn) <= 6:
         return "*" * len(msisdn)
     return msisdn[:4] + "*" * (len(msisdn) - 7) + msisdn[-3:]
@@ -83,22 +71,25 @@ class SecurityLog:
             SecurityEvent.SEND_REJECTED_BLOCKED,
         ),
     }
-    _CATEGORY_OF = {event.value: category for category, events in CATEGORIES.items() for event in events}
+    _CATEGORY_OF = {
+        event.value: category for category, events in CATEGORIES.items() for event in events
+    }
     # Штатные события не делают IP подозрительным
     _ROUTINE = frozenset({SecurityEvent.OTP_ISSUED.value, SecurityEvent.VERIFY_SUCCESS.value})
 
-    def __init__(self, log_dir: str, clock: Callable[[], float] = time.time, console: bool = True):
+    def __init__(self, log_dir: str, clock: Callable[[], float] = time.time,
+                 console: bool = True):
         os.makedirs(log_dir, exist_ok=True)
-        self._logger = _build_logger("otp.security", os.path.join(log_dir, "security.log"), "%(message)s",
-                                     console=console)
+        path = os.path.join(log_dir, "security.log")
+        self._logger = _build_logger("otp.security", path, console)
         self._clock = clock
         self._started = clock()
         self._history: deque[tuple[float, dict]] = deque(maxlen=self.HISTORY_SIZE)
         self._counters: Counter[str] = Counter()
         self._mutex = threading.Lock()
 
-    def event(self, event: SecurityEvent, msisdn: Optional[str] = None, ip: Optional[str] = None,
-              **details) -> None:
+    def event(self, event: SecurityEvent, msisdn: Optional[str] = None,
+              ip: Optional[str] = None, **details) -> None:
         record = {
             "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
             "event": event.value,
@@ -121,7 +112,9 @@ class SecurityLog:
             counters = dict(self._counters)
         records = [record for _, record in history]
 
-        suspicious = Counter(r["ip"] for r in records if r["event"] not in self._ROUTINE and "ip" in r)
+        suspicious = Counter(
+            r["ip"] for r in records if r["event"] not in self._ROUTINE and "ip" in r
+        )
         blocks = [r for r in records if r["event"] == SecurityEvent.MSISDN_BLOCKED.value]
 
         return {
@@ -134,45 +127,22 @@ class SecurityLog:
             "events": records[-limit:][::-1],
         }
 
-    def _timeline(self, history: list[tuple[float, dict]], now: float, minutes: int) -> list[dict]:
+    def _timeline(self, history: list[tuple[float, dict]], now: float,
+                  minutes: int) -> list[dict]:
         """Число событий каждой категории по минутам: от самой старой минуты к текущей."""
         current_minute = int(now // 60)
         timeline = [
-            {"minute": (current_minute - age) * 60, **{category: 0 for category in self.CATEGORIES}}
+            {"minute": (current_minute - age) * 60, **dict.fromkeys(self.CATEGORIES, 0)}
             for age in range(minutes - 1, -1, -1)
         ]
-        for t, record in history:
-            age = current_minute - int(t // 60)
+        for timestamp, record in history:
+            age = current_minute - int(timestamp // 60)
             category = self._CATEGORY_OF.get(record["event"])
             if category and 0 <= age < minutes:
                 timeline[minutes - 1 - age][category] += 1
         return timeline
 
     def close(self) -> None:
-        _close_logger(self._logger)
-
-
-class SmsGateway:
-    """Тестовый SMS-транспорт: дописывает каждую выдачу строкой JSON в outbox-файл.
-
-    Формат задан жюри: {"ts": "2026-11-21T09:00:00+06:00", "msisdn": "...", "code": "012345"}.
-    capture_delivery в сценариях жюри берёт последнюю строку файла для номера.
-    """
-
-    def __init__(self, outbox_path: str, clock: Callable[[], float] = time.time, echo: bool = True):
-        self.path = outbox_path
-        self._clock = clock
-        self._echo = echo
-        self._mutex = threading.Lock()
-        os.makedirs(os.path.dirname(os.path.abspath(outbox_path)), exist_ok=True)
-
-    def deliver(self, msisdn: str, code: str) -> None:
-        ts = datetime.fromtimestamp(self._clock(), BISHKEK_TZ).isoformat(timespec="seconds")
-        line = json.dumps({"ts": ts, "msisdn": msisdn, "code": code}, ensure_ascii=False)
-        with self._mutex, open(self.path, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
-        if self._echo:
-            print(f"[SMS] {ts} to=+{msisdn} code={code}", flush=True)
-
-    def close(self) -> None:
-        """Файл открывается на каждую запись — закрывать нечего (метод для единообразия)."""
+        for handler in list(self._logger.handlers):
+            self._logger.removeHandler(handler)
+            handler.close()

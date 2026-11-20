@@ -25,7 +25,9 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
-DEFAULT_OUTBOX = os.getenv("OTP_OUTBOX", os.path.join(os.path.dirname(os.path.abspath(__file__)), "outbox", "sms.jsonl"))
+HERE = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_OUTBOX = os.getenv("OTP_OUTBOX", os.path.join(HERE, "outbox", "sms.jsonl"))
+CODE_SPACE = 1_000_000  # все 6-значные коды
 
 STATUS_LABELS = {
     200: "200 (код подошёл)",
@@ -37,9 +39,8 @@ STATUS_LABELS = {
 
 
 def post(url: str, payload: dict) -> tuple[int, dict]:
-    req = urllib.request.Request(
-        url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST"
-    )
+    req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
+                                 headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             status, raw = resp.status, resp.read()
@@ -52,18 +53,19 @@ def post(url: str, payload: dict) -> tuple[int, dict]:
 
 
 def read_outbox(outbox: str) -> dict[str, str]:
-    """Последний доставленный код каждого номера из outbox (строки JSON {"ts","msisdn","code"})."""
-    codes: dict[str, str] = {}
+    """Последний доставленный код каждого номера из outbox ({"ts","msisdn","code"} в строке)."""
     try:
         with open(outbox, encoding="utf-8") as f:
-            for line in f:
-                try:
-                    record = json.loads(line)
-                    codes[record["msisdn"]] = record["code"]  # поздние строки перезаписывают ранние
-                except (ValueError, KeyError, TypeError):
-                    continue
+            lines = f.readlines()
     except OSError:
-        pass
+        return {}
+    codes: dict[str, str] = {}
+    for line in lines:
+        try:
+            record = json.loads(line)
+            codes[record["msisdn"]] = record["code"]  # поздние строки перезаписывают ранние
+        except (ValueError, KeyError, TypeError):
+            continue
     return codes
 
 
@@ -85,7 +87,7 @@ def send_and_leak(base: str, msisdns: list[str], outbox: str) -> dict[str, Optio
 
 
 def guesses(n: int, real: Optional[str], plant_at: int) -> list[str]:
-    codes = [f"{i:06d}" for i in random.sample(range(1_000_000), n)]
+    codes = [f"{i:06d}" for i in random.sample(range(CODE_SPACE), n)]
     if real is not None:
         codes = [c for c in codes if c != real]
         codes.insert(min(plant_at, len(codes)), real)
@@ -93,12 +95,13 @@ def guesses(n: int, real: Optional[str], plant_at: int) -> list[str]:
 
 
 def run_verifies(base: str, pairs: list[tuple[str, str]], workers: int) -> Counter:
-    def one(pair):
-        status, _ = post(f"{base}/otp/verify", {"msisdn": pair[0], "code": pair[1]})
+    def verify(pair: tuple[str, str]) -> int:
+        msisdn, code = pair
+        status, _ = post(f"{base}/otp/verify", {"msisdn": msisdn, "code": code})
         return status
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        return Counter(pool.map(one, pairs))
+        return Counter(pool.map(verify, pairs))
 
 
 def report(name: str, stats: Counter, planted: bool) -> bool:
@@ -111,7 +114,8 @@ def report(name: str, stats: Counter, planted: bool) -> bool:
     if others:
         print(f"  {'прочие':<21}: {others}")
     print(f"  настоящий код подмешан: {'да' if planted else 'нет (не удалось узнать)'}")
-    print(f"  РЕЗУЛЬТАТ: {'АТАКА УСПЕШНА — защита не сработала!' if success else 'атака остановлена'}")
+    verdict = "АТАКА УСПЕШНА — защита не сработала!" if success else "атака остановлена"
+    print(f"  РЕЗУЛЬТАТ: {verdict}")
     return not success
 
 
@@ -126,20 +130,22 @@ def attack_single(base: str, attempts: int, workers: int, outbox: str, msisdn: s
     return report("Атака 1: перебор кода для одного номера", stats, real is not None)
 
 
-def attack_distributed(base: str, attempts: int, workers: int, outbox: str, numbers: list[str]) -> bool:
+def attack_distributed(base: str, attempts: int, workers: int, outbox: str,
+                       numbers: list[str]) -> bool:
     real_codes = send_and_leak(base, numbers, outbox)
     known = sum(code is not None for code in real_codes.values())
     print(f"[distributed] настоящие коды известны для {known}/{len(numbers)} номеров")
 
     # Номера перебираются по кругу (раунд = одна попытка на каждый номер), поэтому за первые
     # 20 проверок ни один номер не набирает 5 неверных и блокировка номера не срабатывает.
-    # Настоящий код каждого номера стоит в 3-м раунде (проверки 101-150) — его должен отсечь лимит по IP.
+    # Настоящий код каждого номера стоит в 3-м раунде (проверки 101-150) —
+    # его должен отсечь лимит по IP.
     rounds = max(1, attempts // len(numbers))
     per_number = {m: guesses(rounds, real_codes[m], plant_at=2) for m in numbers}
     pairs = [(m, per_number[m][r]) for r in range(rounds) for m in numbers][:attempts]
     stats = run_verifies(base, pairs, workers)
-    planted = known > 0
-    return report(f"Атака 2: распределённый перебор по {len(numbers)} номерам с одного IP", stats, planted)
+    title = f"Атака 2: распределённый перебор по {len(numbers)} номерам с одного IP"
+    return report(title, stats, planted=known > 0)
 
 
 def main() -> int:
@@ -148,7 +154,8 @@ def main() -> int:
     p.add_argument("--attempts", type=int, default=1000, help="попыток на каждую атаку")
     p.add_argument("--workers", type=int, default=10, help="параллельных потоков")
     p.add_argument("--numbers", type=int, default=50, help="номеров в распределённой атаке")
-    p.add_argument("--outbox", default=DEFAULT_OUTBOX, help="файл тестового SMS-транспорта сервиса")
+    p.add_argument("--outbox", default=DEFAULT_OUTBOX,
+                   help="файл тестового SMS-транспорта сервиса")
     p.add_argument("--only", choices=["single", "distributed"])
     p.add_argument("--pause", type=int, default=61,
                    help="пауза между атаками (сек), чтобы окно лимита по IP сбросилось")

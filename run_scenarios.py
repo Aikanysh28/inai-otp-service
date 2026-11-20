@@ -26,17 +26,20 @@ import sys
 import tempfile
 import threading
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Any, Optional
 
 from app.api import OTPApi, Request
 from app.config import Settings
 from app.otp_service import OTPService
-from app.security_log import SecurityLog, SmsGateway
+from app.security_log import SecurityLog
+from app.sms import SmsGateway
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_SCENARIOS = sorted(glob.glob(os.path.join(HERE, "scenarios", "scenarios_*.json")))
 DEFAULT_IP = "127.0.0.1"
+DEFAULT_START = 1_800_000_000.0  # если в фикстуре нет start_time
 
 
 class ScenarioFailed(Exception):
@@ -44,7 +47,9 @@ class ScenarioFailed(Exception):
 
 
 class FakeClock:
-    def __init__(self, start: float):
+    """Подменяемые часы: время стоит, пока его явно не сдвинут."""
+
+    def __init__(self, start: float = DEFAULT_START):
         self.now = start
 
     def __call__(self) -> float:
@@ -87,10 +92,11 @@ def last_delivery(outbox: str, msisdn: str) -> str:
 class ScenarioRun:
     def __init__(self, scenario: dict, fixture: dict, workdir: str):
         start = fixture.get("start_time")
-        self.clock = FakeClock(datetime.fromisoformat(start).timestamp() if start else 1_800_000_000.0)
+        start_ts = datetime.fromisoformat(start).timestamp() if start else DEFAULT_START
+        self.clock = FakeClock(start_ts)
         self.outbox = os.path.join(workdir, "outbox", "sms.jsonl")
-        settings = Settings(secret_key=secrets.token_bytes(32), log_dir=os.path.join(workdir, "logs"),
-                            outbox_path=self.outbox)
+        settings = Settings(secret_key=secrets.token_bytes(32),
+                            log_dir=os.path.join(workdir, "logs"), outbox_path=self.outbox)
         settings = self._apply_overrides(settings, scenario.get("overrides") or {})
         self.service = OTPService(
             settings,
@@ -113,8 +119,8 @@ class ScenarioRun:
     def call(self, req: dict) -> tuple[int, dict]:
         body = substitute(req.get("body"), self.variables)
         raw = json.dumps(body).encode() if body is not None else b""
-        request = Request.build(req["method"], req["path"], {}, raw, req.get("client_ip", DEFAULT_IP))
-        response = self.api.handle(request)
+        ip = req.get("client_ip", DEFAULT_IP)
+        response = self.api.handle(Request.build(req["method"], req["path"], {}, raw, ip))
         return response.status, response.body if isinstance(response.body, dict) else {}
 
     def run_step(self, step: dict) -> None:
@@ -123,11 +129,12 @@ class ScenarioRun:
             status, body = self.call(step)
             expected = step.get("expected", {})
             if "status" in expected and status != expected["status"]:
-                raise ScenarioFailed(f"{step['method']} {step['path']}: ожидался {expected['status']}, "
-                                     f"получен {status} {body}")
+                raise ScenarioFailed(f"{step['method']} {step['path']}: "
+                                     f"ожидался {expected['status']}, получен {status} {body}")
             for key, value in (expected.get("body") or {}).items():
                 if body.get(key) != value:
-                    raise ScenarioFailed(f"{step['path']}: body.{key}={body.get(key)!r}, ожидалось {value!r}")
+                    raise ScenarioFailed(f"{step['path']}: body.{key}={body.get(key)!r}, "
+                                         f"ожидалось {value!r}")
         elif op == "capture_delivery":
             self.variables[step["bind"]] = last_delivery(self.outbox, step["msisdn"])
         elif op == "advance":
@@ -139,25 +146,20 @@ class ScenarioRun:
 
     def _run_parallel(self, step: dict) -> None:
         requests = step["requests"]
-        statuses: list[int] = []
-        lock = threading.Lock()
-        barrier = threading.Barrier(len(requests))
+        barrier = threading.Barrier(len(requests))  # стартуют одновременно
 
-        def worker(req: dict) -> None:
+        def call_together(req: dict) -> int:
             barrier.wait()
             status, _ = self.call(req)
-            with lock:
-                statuses.append(status)
+            return status
 
-        threads = [threading.Thread(target=worker, args=(r,)) for r in requests]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
+        with ThreadPoolExecutor(max_workers=len(requests)) as pool:
+            statuses = list(pool.map(call_together, requests))
 
         expected = step.get("expected", {})
         if "count" in expected and len(statuses) != expected["count"]:
-            raise ScenarioFailed(f"parallel: {len(statuses)} ответов, ожидалось {expected['count']}")
+            raise ScenarioFailed(f"parallel: {len(statuses)} ответов, "
+                                 f"ожидалось {expected['count']}")
         got = {str(k): v for k, v in Counter(statuses).items()}
         want = {str(k): v for k, v in (expected.get("status_counts") or {}).items()}
         if want and got != want:
@@ -188,12 +190,12 @@ def run_file(path: str) -> tuple[int, int]:
                 for number, step in enumerate(scenario["steps"], 1):
                     try:
                         run.run_step(step)
-                    except ScenarioFailed as e:
-                        raise ScenarioFailed(f"шаг {number}: {e}") from None
+                    except ScenarioFailed as error:
+                        raise ScenarioFailed(f"шаг {number}: {error}") from None
                 print(f"  PASS  {label}")
                 passed += 1
-            except (ScenarioFailed, KeyError, ValueError, OSError) as e:
-                print(f"  FAIL  {label}: {e}")
+            except (ScenarioFailed, KeyError, ValueError, OSError) as error:
+                print(f"  FAIL  {label}: {error}")
             finally:
                 if run is not None:
                     run.close()

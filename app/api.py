@@ -1,7 +1,7 @@
-"""Слой API, не зависящий от HTTP-сервера: разбор запроса, валидация, маршрутизация, коды ответов.
+"""Слой API без привязки к HTTP-серверу: разбор запроса, валидация, маршруты, коды ответов.
 
-  POST /otp/send   {"msisdn"}          -> 200 | 429
-  POST /otp/verify {"msisdn", "code"}  -> 200 | 401 | 410 | 423 | 429
+  POST /otp/send   {"msisdn"}          -> 200 | 400 | 423 | 429
+  POST /otp/verify {"msisdn", "code"}  -> 200 | 400 | 401 | 410 | 423 | 429
   GET  /health                         -> 200 | 503
   GET  /dashboard                      -> HTML-дашборд событий безопасности
   GET  /api/security/events            -> JSON для дашборда
@@ -57,7 +57,8 @@ class Request:
     ip: str
 
     @classmethod
-    def build(cls, method: str, target: str, headers: Mapping[str, str], body: bytes, ip: str) -> "Request":
+    def build(cls, method: str, target: str, headers: Mapping[str, str], body: bytes,
+              ip: str) -> Request:
         url = urlsplit(target)
         query = {key: values[0] for key, values in parse_qs(url.query).items()}
         return cls(method, url.path.rstrip("/") or "/", query, headers, body, ip)
@@ -66,7 +67,7 @@ class Request:
         try:
             data = json.loads(self.body or b"{}")
         except (ValueError, UnicodeDecodeError):
-            raise BadRequest("body must be valid JSON")
+            raise BadRequest("body must be valid JSON") from None
         if not isinstance(data, dict):
             raise BadRequest("body must be a JSON object")
         return data
@@ -79,13 +80,15 @@ class Response:
     headers: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def json(cls, status: int, body: dict, retry_after: Optional[int] = None, **headers: str) -> "Response":
+    def json(cls, status: int, body: dict, retry_after: Optional[int] = None) -> Response:
+        """JSON-ответ; для неуспешного с retry_after добавляется заголовок Retry-After."""
+        headers = {}
         if retry_after is not None and status != 200:
             headers["Retry-After"] = str(retry_after)
         return cls(status, body, headers)
 
     @classmethod
-    def error(cls, status: int, reason: str, **extra: Any) -> "Response":
+    def error(cls, status: int, reason: str, **extra: Any) -> Response:
         return cls(status, {"status": reason, **extra})
 
 
@@ -98,7 +101,8 @@ def validate_msisdn(value: object) -> str:
 
 def validate_code(value: object, length: int) -> str:
     """Код — строка ровно из length цифр; ведущие нули значимы, число не принимается."""
-    if not isinstance(value, str) or len(value) != length or not value.isascii() or not value.isdigit():
+    is_digits = isinstance(value, str) and value.isascii() and value.isdigit()
+    if not is_digits or len(value) != length:
         raise BadRequest(f"code must be a string of exactly {length} digits")
     return value
 
@@ -107,6 +111,10 @@ def _field(body: dict, name: str) -> object:
     if name not in body:
         raise BadRequest(f"field '{name}' is required")
     return body[name]
+
+
+def _without_none(**fields: Any) -> dict:
+    return {name: value for name, value in fields.items() if value is not None}
 
 
 @lru_cache(maxsize=1)
@@ -136,12 +144,14 @@ class OTPApi:
             return Response.error(404, "not_found")
         try:
             return route(request)
-        except BadRequest as e:
-            return Response.error(400, "bad_request", error=str(e))
+        except BadRequest as error:
+            return Response.error(400, "bad_request", error=str(error))
         except StoreUnavailable:
             # Хранилище недоступно: не выдаём и не проверяем коды «вслепую» (fail closed).
-            self.service.log.event(SecurityEvent.STORE_UNAVAILABLE, ip=request.ip, path=request.path)
-            return Response.json(503, {"status": "service_unavailable"}, retry_after=STORE_RETRY_AFTER)
+            self.service.log.event(SecurityEvent.STORE_UNAVAILABLE, ip=request.ip,
+                                   path=request.path)
+            return Response.json(503, {"status": "service_unavailable"},
+                                 retry_after=STORE_RETRY_AFTER)
 
     # ---------- OTP ----------
 
@@ -149,12 +159,13 @@ class OTPApi:
         msisdn = validate_msisdn(_field(request.json(), "msisdn"))
         result = self.service.send(msisdn, request.ip)
 
-        payload: dict = {"status": result.status.value}
         if result.status is SendStatus.SENT:
-            payload.update(expires_in=result.expires_in, next_send_in=result.retry_after)
+            payload = _without_none(status=result.status.value, expires_in=result.expires_in,
+                                    next_send_in=result.retry_after)
         else:
-            payload["retry_after"] = result.retry_after
-        return Response.json(SEND_HTTP_STATUS[result.status], payload, retry_after=result.retry_after)
+            payload = _without_none(status=result.status.value, retry_after=result.retry_after)
+        return Response.json(SEND_HTTP_STATUS[result.status], payload,
+                             retry_after=result.retry_after)
 
     def verify(self, request: Request) -> Response:
         # IP-лимит списывается первым — до разбора тела, проверки кода и блокировки номера:
@@ -166,13 +177,10 @@ class OTPApi:
             code = validate_code(_field(body, "code"), self.service.settings.code_length)
             result = self.service.verify_code(msisdn, code, request.ip)
 
-        payload = {
-            "status": result.status.value,
-            "attempts_left": result.attempts_left,
-            "retry_after": result.retry_after,
-        }
-        payload = {key: value for key, value in payload.items() if value is not None}
-        return Response.json(VERIFY_HTTP_STATUS[result.status], payload, retry_after=result.retry_after)
+        payload = _without_none(status=result.status.value, attempts_left=result.attempts_left,
+                                retry_after=result.retry_after)
+        return Response.json(VERIFY_HTTP_STATUS[result.status], payload,
+                             retry_after=result.retry_after)
 
     # ---------- служебное ----------
 
@@ -196,7 +204,7 @@ class OTPApi:
         try:
             limit = int(request.query.get("limit", EVENTS_DEFAULT_LIMIT))
         except ValueError:
-            raise BadRequest("limit must be an integer")
+            raise BadRequest("limit must be an integer") from None
         data = self.service.log.snapshot(limit=max(1, min(limit, EVENTS_MAX_LIMIT)))
         data["storage"] = self.service.store.name
         return Response(200, data, {"Cache-Control": "no-store"})

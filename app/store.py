@@ -107,10 +107,11 @@ class RedisStore:
     name = "redis"
     LOCK_POLL_INTERVAL = 0.002
 
-    def __init__(self, client, prefix: str = "otp:", lock_ttl: float = 5.0, lock_wait: float = 5.0):
+    def __init__(self, client, prefix: str = "otp:", lock_ttl: float = 5.0,
+                 lock_wait: float = 5.0):
         if redis is None:  # pragma: no cover
             raise RuntimeError("Для Redis нужен пакет redis: pip install redis")
-        self.r = client
+        self.client = client
         self.prefix = prefix
         self.lock_ttl = lock_ttl
         self.lock_wait = lock_wait
@@ -135,17 +136,17 @@ class RedisStore:
 
     def get(self, key: str) -> Any:
         with self._translate_errors():
-            raw = self.r.get(self._key(key))
+            raw = self.client.get(self._key(key))
         return None if raw is None else json.loads(raw)
 
     def set(self, key: str, value: Any, ttl: Optional[float] = None) -> None:
         px = max(1, int(ttl * 1000)) if ttl is not None else None
         with self._translate_errors():
-            self.r.set(self._key(key), json.dumps(value), px=px)
+            self.client.set(self._key(key), json.dumps(value), px=px)
 
     def delete(self, key: str) -> None:
         with self._translate_errors():
-            self.r.delete(self._key(key))
+            self.client.delete(self._key(key))
 
     @contextmanager
     def lock(self, name: str) -> Iterator[None]:
@@ -159,20 +160,21 @@ class RedisStore:
 
     def ping(self) -> bool:
         with self._translate_errors():
-            return bool(self.r.ping())
+            return bool(self.client.ping())
 
     def _acquire(self, key: str, token: str, name: str) -> None:
         deadline = time.monotonic() + self.lock_wait
         with self._translate_errors():
             # TTL у блокировки защищает от «вечного» замка, если процесс упал внутри секции.
-            while not self.r.set(key, token, nx=True, px=int(self.lock_ttl * 1000)):
+            lock_ttl_ms = int(self.lock_ttl * 1000)
+            while not self.client.set(key, token, nx=True, px=lock_ttl_ms):
                 if time.monotonic() >= deadline:
                     raise StoreUnavailable(f"lock {name!r} timeout")
                 time.sleep(self.LOCK_POLL_INTERVAL)
 
     def _release(self, key: str, token: str) -> None:
         """Снять блокировку, только если она всё ещё наша (compare-and-delete через WATCH)."""
-        with self._translate_errors(), self.r.pipeline() as pipe:
+        with self._translate_errors(), self.client.pipeline() as pipe:
             try:
                 pipe.watch(key)
                 current = pipe.get(key)

@@ -5,8 +5,8 @@ import os
 import secrets
 from dataclasses import dataclass, field
 
-
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_OUTBOX = os.path.join(PROJECT_ROOT, "outbox", "sms.jsonl")
 
 
 def _env_int(name: str, default: int) -> int:
@@ -49,16 +49,20 @@ class Settings:
     # Тестовый SMS-транспорт: каждая выдача дописывается строкой JSON в этот файл
     # (формат жюри: {"ts", "msisdn", "code"}). Сервис этот файл не читает.
     outbox_path: str = field(
-        default_factory=lambda: os.getenv("OTP_OUTBOX", os.path.join(PROJECT_ROOT, "outbox", "sms.jsonl"))
+        default_factory=lambda: os.getenv("OTP_OUTBOX", DEFAULT_OUTBOX)
     )
     # IP соединений, которым доверяем заголовок X-Forwarded-For (например, тестовый стенд жюри
     # на 127.0.0.1). По умолчанию пусто: IP берётся только из сокета.
-    trusted_proxies: frozenset[str] = field(default_factory=lambda: _env_list("OTP_TRUSTED_PROXIES"))
+    trusted_proxies: frozenset[str] = field(
+        default_factory=lambda: _env_list("OTP_TRUSTED_PROXIES")
+    )
 
     # Хранилище: пусто — в памяти процесса; иначе Redis, напр. redis://localhost:6379/0
     redis_url: str = field(default_factory=lambda: os.getenv("REDIS_URL", ""))
     # Если задан — дашборд и /api/security/events требуют ?token=... или X-Dashboard-Token
-    dashboard_token: str = field(default_factory=lambda: os.getenv("DASHBOARD_TOKEN", ""), repr=False)
+    dashboard_token: str = field(
+        default_factory=lambda: os.getenv("DASHBOARD_TOKEN", ""), repr=False
+    )
 
     host: str = field(default_factory=lambda: os.getenv("HOST", "0.0.0.0"))
     port: int = field(default_factory=lambda: _env_int("PORT", 8000))

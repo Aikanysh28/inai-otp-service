@@ -177,7 +177,8 @@ scenarios/           открытые сценарии жюри (scenarios_examp
 app/config.py        параметры (TTL, лимиты, задержки)
 app/store.py         KV-хранилища с TTL и блокировками: MemoryStore и RedisStore
 app/otp_service.py   бизнес-логика: генерация, HMAC, лимиты, блокировки
-app/security_log.py  журнал событий безопасности (SecurityEvent, SecurityLog) + тестовый SMS-транспорт в outbox (SmsGateway)
+app/security_log.py  журнал событий безопасности (SecurityEvent, SecurityLog)
+app/sms.py           тестовый SMS-транспорт: строки JSON в outbox/sms.jsonl (SmsGateway)
 app/api.py           слой API без привязки к HTTP-серверу: валидация, маршруты, коды ответов, дашборд API
 app/main.py          HTTP-сервер (http.server) и сборка зависимостей
 app/static/dashboard.html  дашборд событий безопасности

@@ -16,22 +16,12 @@ import pytest
 from app.config import Settings
 import run_scenarios
 from app.main import create_server, resolve_client_ip
+from run_scenarios import FakeClock
 from app.otp_service import OTPService, VerifyStatus
 from app.security_log import SecurityEvent, SecurityLog
 from app.store import MemoryStore, RedisStore
 
 MSISDN = "996555123456"
-
-
-class FakeClock:
-    def __init__(self):
-        self.now = 1_000_000.0
-
-    def __call__(self):
-        return self.now
-
-    def advance(self, seconds: float):
-        self.now += seconds
 
 
 class Resp:
@@ -83,7 +73,6 @@ def running_server(settings: Settings, service: Optional[OTPService] = None) -> 
         server.server_close()
         if service is not None:
             service.log.close()
-            service.sms.close()
 
 
 def make_store(kind: str, clock):
@@ -459,7 +448,8 @@ def test_dashboard_token(tmp_path):
         assert client.get("/dashboard").status_code == 401
         assert client.get("/api/security/events?token=wrong").status_code == 401
         assert client.get("/dashboard?token=s3cret").status_code == 200
-        assert client.get("/api/security/events", headers={"X-Dashboard-Token": "s3cret"}).status_code == 200
+        by_header = client.get("/api/security/events", headers={"X-Dashboard-Token": "s3cret"})
+        assert by_header.status_code == 200
 
 
 # ---------- Redis ----------
@@ -537,7 +527,7 @@ def test_unknown_route_and_wrong_method(env):
 
 
 def test_security_logs_are_isolated(tmp_path):
-    """Два журнала пишут каждый в свой файл (раньше второй перехватывал глобальный логгер первого)."""
+    """Два журнала пишут каждый в свой файл, не перехватывая логгер друг друга."""
     first, second = SecurityLog(str(tmp_path / "a")), SecurityLog(str(tmp_path / "b"))
     try:
         first.event(SecurityEvent.OTP_ISSUED, MSISDN, "1.1.1.1")
@@ -554,9 +544,9 @@ def test_security_logs_are_isolated(tmp_path):
 # ---------- доверенный прокси ----------
 
 @pytest.mark.parametrize("peer, xff, expected", [
-    ("203.0.113.5", "192.0.2.10", "203.0.113.5"),       # недоверенный источник: заголовок игнорируется
-    ("127.0.0.1", "192.0.2.10", "192.0.2.10"),          # доверенный прокси
-    ("127.0.0.1", "6.6.6.6, 192.0.2.10", "192.0.2.10"),  # берётся адрес, добавленный самим прокси
+    ("203.0.113.5", "192.0.2.10", "203.0.113.5"),  # не доверенный источник: заголовок игнорируется
+    ("127.0.0.1", "192.0.2.10", "192.0.2.10"),  # доверенный прокси
+    ("127.0.0.1", "6.6.6.6, 192.0.2.10", "192.0.2.10"),  # адрес, добавленный самим прокси
     ("127.0.0.1", "not-an-ip", "127.0.0.1"),
     ("127.0.0.1", None, "127.0.0.1"),
 ])
@@ -567,17 +557,19 @@ def test_resolve_client_ip(peer, xff, expected):
 def test_spoofed_forwarded_for_does_not_bypass_ip_limit(env):
     """Без OTP_TRUSTED_PROXIES смена X-Forwarded-For не даёт обойти лимит 20/мин."""
     client, *_ = env
+    body = json.dumps({"msisdn": MSISDN, "code": "000000"}).encode()
     for i in range(25):
-        req = urllib.request.Request(client.base + "/otp/verify", method="POST",
-                                     data=json.dumps({"msisdn": MSISDN, "code": "000000"}).encode(),
-                                     headers={"Content-Type": "application/json", "X-Forwarded-For": f"10.9.0.{i}"})
+        headers = {"Content-Type": "application/json", "X-Forwarded-For": f"10.9.0.{i}"}
+        req = urllib.request.Request(client.base + "/otp/verify", data=body, method="POST",
+                                     headers=headers)
         resp = Client._request(req)
     assert resp.status_code == 429
 
 
 # ---------- сценарии в формате жюри ----------
 
-SCENARIO_FILES = sorted(glob.glob(os.path.join(os.path.dirname(__file__), "..", "scenarios", "scenarios_*.json")))
+SCENARIOS_DIR = os.path.join(os.path.dirname(__file__), "..", "scenarios")
+SCENARIO_FILES = sorted(glob.glob(os.path.join(SCENARIOS_DIR, "scenarios_*.json")))
 
 
 @pytest.mark.parametrize("path", SCENARIO_FILES, ids=os.path.basename)
@@ -588,8 +580,8 @@ def test_jury_format_scenarios(path):
 
 def test_scenario_runner_detects_failure(tmp_path):
     bad = [{"id": "BAD", "fixture": "", "overrides": {}, "steps": [
-        {"op": "request", "method": "POST", "path": "/otp/send", "body": {"msisdn": "996770730000"},
-         "expected": {"status": 418}}]}]
+        {"op": "request", "method": "POST", "path": "/otp/send",
+         "body": {"msisdn": "996770730000"}, "expected": {"status": 418}}]}]
     path = tmp_path / "scenarios_bad.json"
     path.write_text(json.dumps(bad), encoding="utf-8")
     assert run_scenarios.run_file(str(path)) == (0, 1)

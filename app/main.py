@@ -19,11 +19,12 @@ from .store import MemoryStore, RedisStore, Store
 MAX_BODY = 4096
 
 
-def resolve_client_ip(peer_ip: str, forwarded_for: Optional[str], trusted_proxies: AbstractSet[str]) -> str:
-    """IP клиента: из сокета, а X-Forwarded-For — только если соединение пришло от доверенного прокси.
+def resolve_client_ip(peer_ip: str, forwarded_for: Optional[str],
+                      trusted_proxies: AbstractSet[str]) -> str:
+    """IP клиента: из сокета, а X-Forwarded-For — только от доверенного прокси.
 
-    Произвольному X-Forwarded-For не доверяем: иначе атакующий обходил бы IP-лимит, меняя заголовок.
-    Берётся последний адрес цепочки — его добавил сам доверенный прокси.
+    Произвольному X-Forwarded-For не доверяем: иначе атакующий обходил бы IP-лимит,
+    меняя заголовок. Берётся последний адрес цепочки — его добавил сам доверенный прокси.
     """
     if peer_ip in trusted_proxies and forwarded_for:
         candidate = forwarded_for.split(",")[-1].strip()
@@ -34,7 +35,8 @@ def resolve_client_ip(peer_ip: str, forwarded_for: Optional[str], trusted_proxie
     return peer_ip
 
 
-def make_handler(api: OTPApi, trusted_proxies: AbstractSet[str] = frozenset()) -> type[BaseHTTPRequestHandler]:
+def make_handler(api: OTPApi,
+                 trusted_proxies: AbstractSet[str] = frozenset()) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         server_version = "OTPService/1.0"
         sys_version = ""
@@ -55,7 +57,8 @@ def make_handler(api: OTPApi, trusted_proxies: AbstractSet[str] = frozenset()) -
             if length > MAX_BODY:
                 return Response.error(413, "payload_too_large")
             body = self.rfile.read(length) if length else b""
-            ip = resolve_client_ip(self.client_address[0], self.headers.get("X-Forwarded-For"), trusted_proxies)
+            forwarded_for = self.headers.get("X-Forwarded-For")
+            ip = resolve_client_ip(self.client_address[0], forwarded_for, trusted_proxies)
             return api.handle(Request.build(self.command, self.path, self.headers, body, ip))
 
         def _write(self, response: Response) -> None:
@@ -72,9 +75,8 @@ def make_handler(api: OTPApi, trusted_proxies: AbstractSet[str] = frozenset()) -
             self.end_headers()
             self.wfile.write(data)
 
-        def log_message(self, format: str, *args) -> None:
-            # access-лог отключён: под атакой тысячи строк в консоли мешают видеть SMS и события
-            pass
+        def log_message(self, *args) -> None:
+            """Access-лог отключён: под атакой тысячи строк мешают видеть SMS и события."""
 
     return Handler
 
