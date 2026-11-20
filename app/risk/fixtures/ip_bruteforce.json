@@ -1,0 +1,224 @@
+{
+  "ip": "139.66.77.135",
+  "ts": 1795162699.22,
+  "score": 40,
+  "level": "medium",
+  "would_action": "stricter_delay",
+  "would_action_text": "задержки строже (×2)",
+  "reasons": [
+    {
+      "name": "fail_rate",
+      "points": 25,
+      "detail": "100% проверок неудачны (20 попыток)"
+    },
+    {
+      "name": "hammering_locked",
+      "points": 15,
+      "detail": "попыток к заблокированному номеру: 15"
+    }
+  ],
+  "first_seen": 1795162687.811,
+  "last_seen": 1795162699.22,
+  "stats": {
+    "numbers": 1,
+    "sms_sent": 1,
+    "sms_rejected": 0,
+    "verify_ok": 0,
+    "verify_fail": 5,
+    "verify_expired": 0,
+    "verify_locked": 15,
+    "ip_limited": 0
+  },
+  "sms_cost": 1.0,
+  "currency": "сом",
+  "sparkline": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "events": [
+    {
+      "ts": 1795162699.22,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162699.009,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162698.628,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162698.389,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162698.172,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162697.896,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162697.673,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162697.12,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162696.609,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162696.216,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162695.804,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162695.331,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162695.106,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162694.858,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162694.41,
+      "event": "verify_locked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162694.154,
+      "event": "number_blocked",
+      "msisdn": "+996500***815",
+      "status": 423,
+      "reason": "too_many_failed_attempts",
+      "new_ip": false
+    },
+    {
+      "ts": 1795162694.154,
+      "event": "verify_fail",
+      "msisdn": "+996500***815",
+      "status": 401,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162693.894,
+      "event": "verify_fail",
+      "msisdn": "+996500***815",
+      "status": 401,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162693.383,
+      "event": "verify_fail",
+      "msisdn": "+996500***815",
+      "status": 401,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162692.94,
+      "event": "verify_fail",
+      "msisdn": "+996500***815",
+      "status": 401,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162692.429,
+      "event": "verify_fail",
+      "msisdn": "+996500***815",
+      "status": 401,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795162687.811,
+      "event": "send_ok",
+      "msisdn": "+996500***815",
+      "status": 200,
+      "reason": null,
+      "new_ip": false
+    }
+  ]
+}

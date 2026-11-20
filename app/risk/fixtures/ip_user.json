@@ -1,0 +1,53 @@
+{
+  "ip": "49.202.24.19",
+  "ts": 1795161616.045,
+  "score": 0,
+  "level": "low",
+  "would_action": "allow",
+  "would_action_text": "обычный режим",
+  "reasons": [],
+  "first_seen": 1795161600.0,
+  "last_seen": 1795161616.045,
+  "stats": {
+    "numbers": 1,
+    "sms_sent": 1,
+    "sms_rejected": 0,
+    "verify_ok": 1,
+    "verify_fail": 0,
+    "verify_expired": 0,
+    "verify_locked": 0,
+    "ip_limited": 0
+  },
+  "sms_cost": 1.0,
+  "currency": "сом",
+  "sparkline": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "events": [
+    {
+      "ts": 1795161616.045,
+      "event": "verify_ok",
+      "msisdn": "+996501***240",
+      "status": 200,
+      "reason": null,
+      "new_ip": false
+    },
+    {
+      "ts": 1795161600.0,
+      "event": "send_ok",
+      "msisdn": "+996501***240",
+      "status": 200,
+      "reason": null,
+      "new_ip": false
+    }
+  ]
+}

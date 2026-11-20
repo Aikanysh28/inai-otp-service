@@ -1,0 +1,91 @@
+{
+  "now": 1795163280.57,
+  "mode": "observe",
+  "window": 600,
+  "tz_offset_hours": 6,
+  "levels": {
+    "medium_at": 30,
+    "high_at": 60,
+    "max_score": 100
+  },
+  "actions": {
+    "low": {
+      "action": "allow",
+      "text": "обычный режим"
+    },
+    "medium": {
+      "action": "stricter_delay",
+      "text": "задержки строже (×2)"
+    },
+    "high": {
+      "action": "deny",
+      "text": "отказ (429) и тревога"
+    }
+  },
+  "signals": [
+    {
+      "name": "fan_out",
+      "points": [
+        20,
+        40
+      ],
+      "description": "коды запрошены на много разных номеров"
+    },
+    {
+      "name": "sequential",
+      "points": [
+        25
+      ],
+      "description": "номера идут подряд (последние 4 цифры отличаются на 1..10)"
+    },
+    {
+      "name": "no_conversion",
+      "points": [
+        25
+      ],
+      "description": "SMS отправлены, но почти не подтверждены"
+    },
+    {
+      "name": "fail_rate",
+      "points": [
+        25
+      ],
+      "description": "большинство проверок кода неудачны"
+    },
+    {
+      "name": "new_ip",
+      "points": [
+        15
+      ],
+      "description": "номер раньше подтверждался с другого IP"
+    },
+    {
+      "name": "hammering_locked",
+      "points": [
+        15
+      ],
+      "description": "попытки проверить заблокированный номер"
+    },
+    {
+      "name": "ip_limited",
+      "points": [
+        15
+      ],
+      "description": "срабатывал лимит проверок по IP"
+    },
+    {
+      "name": "night",
+      "points": [
+        10
+      ],
+      "description": "активность ночью по Бишкеку"
+    }
+  ],
+  "sms_price": 1.0,
+  "currency": "сом",
+  "ingested": 315,
+  "ignored": 0,
+  "errors": 0,
+  "ips_tracked": 41,
+  "alerts_total": 5
+}
