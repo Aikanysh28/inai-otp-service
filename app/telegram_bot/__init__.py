@@ -10,6 +10,26 @@ from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
 
+MAX_RETRY_AFTER = 60  # сек.: не держать очередь дольше, даже если Telegram просит больше
+
+
+def _json_object(stream) -> dict:
+    """Тело ответа Telegram как словарь; что угодно другое (не JSON, список, ...) — {}."""
+    try:
+        data = json.load(stream)
+    except (ValueError, OSError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _retry_after(details: dict, default: float) -> float:
+    """Пауза из ответа 429 (parameters.retry_after), если это разумное число."""
+    parameters = details.get("parameters")
+    value = parameters.get("retry_after") if isinstance(parameters, dict) else None
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+        return min(value, MAX_RETRY_AFTER)
+    return default
+
 
 class TelegramAlerts:
     def __init__(self, token: str, chat_id: str):
@@ -44,6 +64,10 @@ class TelegramAlerts:
             request = Request(self._url, data=payload, headers={"Content-Type": "application/json"})
             try:
                 self._send(request)
+            except Exception as error:  # noqa: BLE001
+                # Сбой одного сообщения не останавливает поток. В лог — только тип ошибки:
+                # в тексте исключения может оказаться URL с токеном бота.
+                logger.warning("Сбой отправки уведомления Telegram: %s", type(error).__name__)
             finally:
                 self._messages.task_done()
 
@@ -52,19 +76,16 @@ class TelegramAlerts:
             delay = 2 ** attempt
             try:
                 with urlopen(request, timeout=5) as response:
-                    if not json.load(response).get("ok"):
+                    if not _json_object(response).get("ok"):
                         logger.warning("Telegram отклонил уведомление")
                     return
             except HTTPError as error:
-                try:
-                    details = json.load(error)
-                except (ValueError, OSError):
-                    details = {}
+                details = _json_object(error)
                 logger.warning("Telegram HTTP %s: %s", error.code, details.get("description", ""))
                 if error.code != 429 and error.code < 500:
                     return
                 if error.code == 429:
-                    delay = details.get("parameters", {}).get("retry_after", delay)
+                    delay = _retry_after(details, delay)
             except (OSError, ValueError) as error:
                 logger.warning("Ошибка доставки Telegram: %s", type(error).__name__)
             if attempt < 2:
