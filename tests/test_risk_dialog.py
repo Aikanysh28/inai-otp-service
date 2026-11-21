@@ -124,7 +124,7 @@ class DialogDashboardTest(unittest.TestCase):
         self.assertIn("showModal()", self.js)
         self.assertIn('addEventListener("close"', self.js)       # Esc закрывает <dialog>
         self.assertIn("e.target === dialog", self.js)             # клик по фону
-        self.assertIn("target.focus()", self.js)                  # фокус возвращается
+        self.assertIn("target.focus({ preventScroll: true })", self.js)  # фокус возвращается без прокрутки
         self.assertNotIn('id="risk-detail"', self.html)           # старой встроенной карточки нет
         # replaceChildren превращает null в текст «null» — в окне все списки детей фильтруются
         self.assertIn('state.detailMissing ? el("span", { class: "risk-stale", '

@@ -213,7 +213,7 @@ class ChainTest(unittest.TestCase):
         self.assertEqual(router.names()[-2:], ["groq", "gemini"])
 
     def test_cooldown_after_auth_until_restart(self):
-        router = Router(groq=lambda r, t: http_error(r.full_url, 403))
+        router = Router(groq=lambda r, t: http_error(r.full_url, 401))
         engine = engine_with(router, llm_providers="groq,gemini", llm_cache_seconds=0, **KEYS)
         mono = FakeClockMono()
         engine._summary.chain.monotonic = mono
@@ -222,6 +222,17 @@ class ChainTest(unittest.TestCase):
         engine.summary()
         self.assertEqual(router.names(), ["groq", "gemini", "gemini"])
         self.assertEqual(engine.meta()["llm"]["providers"][0]["cooling"], "auth")
+
+    def test_forbidden_403_is_not_wrong_key(self):
+        router = Router(groq=lambda r, t: http_error(r.full_url, 403), gemini=lambda r, t: http_error(r.full_url, 403))
+        engine = engine_with(router, llm_providers="groq,gemini", llm_cache_seconds=0, **KEYS)
+        mono = FakeClockMono()
+        engine._summary.chain.monotonic = mono
+        self.assertEqual(engine.summary()["fallback_reason"], "forbidden")
+        self.assertEqual(engine.meta()["llm"]["providers"][0]["cooling"], "forbidden")
+        mono.now += 61  # 403 — пауза 60 с, а не «до перезапуска», как у неверного ключа
+        engine.summary()
+        self.assertEqual(router.names(), ["groq", "gemini", "groq", "gemini"])
 
     def test_time_budget_for_whole_chain(self):
         mono = FakeClockMono()
@@ -255,7 +266,7 @@ class ChainTest(unittest.TestCase):
         router = Router()
         disabled = engine_with(router).summary()
         self.assertEqual((disabled["source"], disabled["fallback_reason"]),
-                         ("template", "disabled"))
+                         ("template", "no_env"))
         quiet = engine_with(router, bot=False, llm_providers="groq", **KEYS).summary()
         self.assertEqual((quiet["source"], quiet["fallback_reason"]), ("template", "no_incidents"))
         self.assertIn("инцидентов не обнаружено", quiet["text"])

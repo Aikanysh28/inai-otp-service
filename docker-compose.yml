@@ -26,6 +26,11 @@ services:
       OTP_DEMO_SHOW_CODE: ${OTP_DEMO_SHOW_CODE:-0}
       # IP, которым доверяем X-Forwarded-For (например, шлюз docker-сети для стенда жюри)
       OTP_TRUSTED_PROXIES: ${OTP_TRUSTED_PROXIES:-}
+      RISK_LLM_PROVIDERS: ${RISK_LLM_PROVIDERS:-}
+      RISK_LLM_GROQ_KEY: ${RISK_LLM_GROQ_KEY:-}
+      RISK_LLM_OPENROUTER_KEY: ${RISK_LLM_OPENROUTER_KEY:-}
+      RISK_LLM_GEMINI_KEY: ${RISK_LLM_GEMINI_KEY:-}
+      RISK_LLM_MODEL: ${RISK_LLM_MODEL:-}
     ports:
       - "${OTP_BIND_ADDRESS:-0.0.0.0}:8000:8000"
     volumes:

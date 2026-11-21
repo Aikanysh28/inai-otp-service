@@ -78,6 +78,9 @@ class RiskSettings:
     llm_base_url: str = ""  # пусто — адрес пресета; действует на первого провайдера цепочки
     llm_timeout: float = 6.0  # на одного провайдера; на всю цепочку — не больше 2 × llm_timeout
     llm_cache_seconds: int = 30
+    # Откуда пришла настройка LLM: env / .env / none, и какой .env прочитан (без значений)
+    llm_config_source: str = "none"
+    llm_env_file: str = ""
 
     # Ограничения памяти
     max_events_per_ip: int = 5000
@@ -87,11 +90,26 @@ class RiskSettings:
     cleanup_every: int = 1000
 
     @classmethod
-    def from_env(cls, prefix: str = "RISK_", environ: dict | None = None) -> "RiskSettings":
-        """Значения по умолчанию, переопределённые переменными окружения prefix + ИМЯ_ПОЛЯ."""
+    def from_env(cls, prefix: str = "RISK_", environ: dict | None = None,
+                 read_env_file: bool = False) -> "RiskSettings":
+        """Значения по умолчанию, переопределённые переменными окружения prefix + ИМЯ_ПОЛЯ.
+
+        read_env_file=True — дополнить окружение строками RISK_* из .env (RISK_ENV_FILE);
+        окружение важнее файла. Так сервер видит ключ LLM без ручного `set -a; . ./.env`.
+        """
         env = os.environ if environ is None else environ
         overrides = {}
+        if read_env_file:
+            from .envfile import risk_environment
+            env, info = risk_environment(env)
+            overrides["llm_config_source"] = info["source"]
+            overrides["llm_env_file"] = info["path"] or ""
+        else:
+            llm_in_env = any(k.startswith("RISK_LLM_") and v for k, v in env.items())
+            overrides["llm_config_source"] = "env" if llm_in_env else "none"
         for field in dataclasses.fields(cls):
+            if field.name in ("llm_config_source", "llm_env_file"):
+                continue
             raw = env.get(prefix + field.name.upper())
             if raw is None or raw == "":
                 continue

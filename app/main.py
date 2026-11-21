@@ -17,6 +17,7 @@ from .config import Settings
 from .otp_service import OTPService
 from .telegram_bot import TelegramAlerts
 from .risk import RiskEngine, RiskSettings
+from .risk.llm import startup_line
 from .risk.schema import derive_id_key
 from .security_log import SecurityLog
 from .store import MemoryStore, RedisStore, Store
@@ -103,7 +104,9 @@ def build_risk(settings: Settings, service: OTPService) -> Optional[RiskEngine]:
         secret = os.getenv("RISK_ID_SECRET")
         id_key = secret.encode() if secret else derive_id_key(settings.secret_key)
         telegram = TelegramAlerts.from_env()
-        engine = RiskEngine(RiskSettings.from_env(), clock=service.clock, id_key=id_key,
+        risk_settings = RiskSettings.from_env(read_env_file=True)  # + RISK_* из .env
+        print(startup_line(risk_settings), file=sys.stderr, flush=True)
+        engine = RiskEngine(risk_settings, clock=service.clock, id_key=id_key,
                             on_alert=telegram.enqueue if telegram else None)
         service.log.add_sink(engine.start_worker())
         return engine
