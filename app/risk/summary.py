@@ -17,7 +17,9 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Callable, Optional
 
-from .llm import LLMChain, configured_names, providers_from_settings
+from .llm import (
+    KEY_VARS, PRESETS, LLMChain, configured_names, disabled_reason, providers_from_settings,
+)
 from .signals import LEVEL_TITLES, classify, plural
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -210,7 +212,8 @@ class SummaryService:
                   "fallback_reason": None, "generated_at": round(now, 3), "window": window,
                   "cached": False}
         if not chain.enabled:
-            answer["fallback_reason"] = "disabled"
+            reason = disabled_reason(self.engine.settings) or ("no_env", "")
+            answer["fallback_reason"], answer["fallback_detail"] = reason
             return answer
         if not facts["incidents"]:
             answer["fallback_reason"] = "no_incidents"
@@ -230,7 +233,22 @@ class SummaryService:
         return answer
 
     def meta(self) -> dict:
-        return dict(self.chain.meta(), configured=configured_names(self.engine.settings))
+        """Состояние LLM для /api/risk/meta — без значений ключей."""
+        s = self.engine.settings
+        reason = disabled_reason(s)
+        configured = []
+        for name in configured_names(s):
+            preset = PRESETS.get(name)
+            key_field = preset[3] if preset else None
+            has_key = bool((getattr(s, key_field) if key_field else "") or
+                           (s.llm_api_key and name == (configured_names(s) or [None])[0]))
+            configured.append({"name": name, "known": preset is not None,
+                               "needs_key": bool(preset and preset[4]), "has_key": has_key,
+                               "key_variable": KEY_VARS.get(name)})
+        return dict(self.chain.meta(), configured=configured_names(s), configured_providers=configured,
+                    source_of_config=s.llm_config_source, env_file=s.llm_env_file or None,
+                    status={"code": reason[0], "message": reason[1]} if reason
+                    else {"code": "enabled", "message": ""})
 
 
 # ---------- проверка фактов ----------

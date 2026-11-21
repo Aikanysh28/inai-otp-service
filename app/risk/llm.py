@@ -46,7 +46,11 @@ DISPLAY_NAMES = {"groq": "Groq", "gemini": "Gemini", "openrouter": "OpenRouter",
                  "ollama": "Ollama", "anthropic": "Anthropic"}
 
 # Причины отката (они же fallback_reason в ответе API)
-REASONS = ("disabled", "no_incidents", "network", "auth", "rate_limited", "bad_response",
+AUTO_CHAIN = ("groq", "openrouter", "gemini", "anthropic")  # если RISK_LLM_PROVIDERS не задан
+KEY_VARS = {"groq": "RISK_LLM_GROQ_KEY", "gemini": "RISK_LLM_GEMINI_KEY",
+            "openrouter": "RISK_LLM_OPENROUTER_KEY", "anthropic": "RISK_LLM_ANTHROPIC_KEY"}
+REASONS = ("disabled", "no_env", "no_key", "unknown_provider", "forbidden",
+           "no_incidents", "network", "auth", "rate_limited", "bad_response",
            "fact_check", "timeout")
 
 
@@ -84,9 +88,7 @@ def providers_from_settings(s: RiskSettings) -> list[LLMProvider]:
     Провайдер без ключа (кроме ollama) пропускается. RISK_LLM_MODEL и RISK_LLM_BASE_URL
     действуют на первого провайдера цепочки; RISK_LLM_API_KEY — запасной ключ для него же.
     """
-    names = [n.strip().lower() for n in s.llm_providers.split(",") if n.strip()]
-    if not names and s.llm_api_key:
-        names = ["anthropic"]
+    names = configured_names(s)
     chain: list[LLMProvider] = []
     for index, name in enumerate(names):
         if name not in PRESETS:
@@ -107,8 +109,45 @@ def providers_from_settings(s: RiskSettings) -> list[LLMProvider]:
 
 
 def configured_names(s: RiskSettings) -> list[str]:
+    """Цепочка из RISK_LLM_PROVIDERS; если её нет — из найденных ключей (groq, openrouter,
+    gemini, anthropic); только RISK_LLM_API_KEY без ключей провайдеров — Anthropic, как раньше."""
     names = [n.strip().lower() for n in s.llm_providers.split(",") if n.strip()]
-    return names or (["anthropic"] if s.llm_api_key else [])
+    if names:
+        return names
+    auto = [name for name in AUTO_CHAIN if getattr(s, PRESETS[name][3])]
+    return auto or (["anthropic"] if s.llm_api_key else [])
+
+
+def startup_line(s: RiskSettings) -> str:
+    """Одна строка для stderr при старте сервера — без значений ключей."""
+    source = {"env": "окружение", ".env": ".env", "none": "нет"}.get(s.llm_config_source, s.llm_config_source)
+    chain = providers_from_settings(s)
+    if chain:
+        first = chain[0]
+        others = f" → {', '.join(p.name for p in chain[1:])}" if len(chain) > 1 else ""
+        key = "ключ задан" if first.has_key else "ключ не нужен"
+        return f"[risk] LLM: {first.name} ({first.model}){others}, {key}; источник: {source}"
+    reason = disabled_reason(s)
+    if reason and reason[0] == "no_env":
+        return "[risk] LLM выключена: нет RISK_LLM_PROVIDERS и ключей"
+    return f"[risk] {reason[1] if reason else 'LLM выключена'}; источник: {source}"
+
+
+def disabled_reason(s: RiskSettings) -> Optional[tuple[str, str]]:
+    """Почему цепочка пуста: (код, текст для людей) или None, если LLM включена."""
+    if providers_from_settings(s):
+        return None
+    names = [n.strip().lower() for n in s.llm_providers.split(",") if n.strip()]
+    unknown = [n for n in names if n not in PRESETS]
+    if unknown:
+        return ("unknown_provider", "Неизвестный провайдер в RISK_LLM_PROVIDERS: " + ", ".join(unknown))
+    if names:
+        missing = [n for n in names if PRESETS[n][4]]
+        name = missing[0] if missing else names[0]
+        var = KEY_VARS.get(name, "RISK_LLM_API_KEY")
+        return ("no_key", f"LLM выключена: нет ключа для провайдера {name} (переменная {var})")
+    return ("no_env", "LLM выключена: серверу не передан ни один параметр RISK_LLM_*. "
+                      "Перезапустите сервер после загрузки .env")
 
 
 # ---------- один вызов ----------
@@ -173,8 +212,10 @@ def complete(provider: LLMProvider, system: str, user: str, timeout: float,
         with opener(request, timeout=timeout) as response:
             raw = response.read()
     except urllib.error.HTTPError as error:
-        if error.code in (401, 403):
-            raise LLMError("auth", f"HTTP {error.code}") from None
+        if error.code == 401:
+            raise LLMError("auth", "HTTP 401") from None
+        if error.code == 403:  # Cloudflare, регион, сеть — не обязательно ключ
+            raise LLMError("forbidden", "HTTP 403") from None
         if error.code == 429:
             raise LLMError("rate_limited", "HTTP 429", _retry_after(error.headers)) from None
         if error.code >= 500:
@@ -291,6 +332,8 @@ class LLMChain:
                                error.retry_after or DEFAULT_RETRY_AFTER)
                 elif error.kind == "auth":
                     self._cool(provider.name, "auth", math.inf)  # до перезапуска
+                elif error.kind == "forbidden":
+                    self._cool(provider.name, "forbidden", DEFAULT_RETRY_AFTER)
                 continue
             accepted = validate(text)
             latency = int(round((self.monotonic() - t0) * 1000))

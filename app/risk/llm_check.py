@@ -48,7 +48,7 @@ def list_models(provider: LLMProvider, timeout: float) -> tuple[Optional[int], l
 
 
 def main() -> int:
-    settings = RiskSettings.from_env()
+    settings = RiskSettings.from_env(read_env_file=True)  # как сервер: + RISK_* из .env
     names = configured_names(settings)
     chain = providers_from_settings(settings)
     if not names:
